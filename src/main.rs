@@ -283,14 +283,21 @@ impl MemoryGame {
         for (index, clue) in CLUES.iter().enumerate() {
             let (x, y) = card_pos(index);
             let focused = self.archive.focus() == index;
+            // Memory slabs have one carved underside, not three nested boxes.
             fb.fill_rect(x, y, CARD_W as u32, CARD_H as u32, DEEP);
-            fb.draw_rect(
-                x,
-                y,
-                CARD_W as u32,
-                CARD_H as u32,
-                if focused { GOLD } else { EDGE },
+            fb.fill_rect(x + 4, y + 68, 119, 25, INK);
+            fb.draw_line(
+                x + 4,
+                y + 95,
+                x + CARD_W - 5,
+                y + 95,
+                if focused { SPIRIT } else { DUST },
             );
+            if focused {
+                fb.fill_rect(x, y + 9, 3, 76, GOLD);
+                fb.draw_line(x, y, x + 16, y, GOLD);
+                fb.draw_line(x + CARD_W - 17, y, x + CARD_W - 1, y, GOLD);
+            }
             draw_scene(
                 fb,
                 x + 8,
@@ -300,7 +307,6 @@ impl MemoryGame {
                 event_for_clip(index),
                 self.elapsed,
             );
-            fb.fill_rect(x + 5, y + 70, 117, 23, INK);
             draw_sentence(fb, clue, x + 22, y + 73, 1, IVORY);
             if self.archive.watched(index) {
                 fb.draw_text(x + 5, y + 5, "*", SPIRIT);
@@ -351,7 +357,8 @@ impl MemoryGame {
             let y = 119 + option as i32 * 58;
             let active = self.testimony_focus == option;
             fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
-            fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
+            fb.fill_rect(70, y, 3, 55, if active { SPIRIT } else { DUST });
+            fb.draw_line(70, y + 54, 570, y + 54, if active { SPIRIT } else { EDGE });
             fb.draw_text_scaled(
                 91,
                 y + 16,
@@ -740,6 +747,17 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     fb.draw_line(x + 5, floor, x + w - 6, floor, EDGE);
     fb.draw_line(x + 5, y + 4, x + 5, floor, DUST);
     fb.draw_line(x + w - 6, y + 4, x + w - 6, floor, DUST);
+    // Translucent diagonal light shafts add depth without encoding extra clues.
+    for beam in 0..4 {
+        let light_x = x + w / 6 + beam * w / 5;
+        fb.draw_line(
+            light_x,
+            y + 6,
+            light_x + w / 12,
+            floor - 4,
+            Pixel::rgb(39, 65, 64),
+        );
+    }
     let unit = if h >= 110 { 2 } else { 1 };
     let base = y + h - 12;
     let ax = x + w / 3;
@@ -1204,6 +1222,29 @@ mod tests {
             rendered != untouched,
             "the inscription must render actual rune pixels"
         );
+    }
+
+    #[test]
+    fn every_carved_rune_is_distinguishable_at_both_ui_scales() {
+        for scale in [1, 2] {
+            let mut images = Vec::new();
+            for rune in 0..RUNE_COUNT {
+                let mut fb = Framebuffer::new(48, 48);
+                draw_rune(&mut fb, rune, 5, 5, scale, IVORY);
+                let image = fb.as_rgba8().to_vec();
+                assert!(images.iter().all(|other| other != &image));
+                images.push(image);
+            }
+        }
+    }
+
+    #[test]
+    fn unrecovered_and_restored_monuments_are_visually_distinct() {
+        let mut erased = Framebuffer::new(640, 360);
+        let mut recovered = Framebuffer::new(640, 360);
+        draw_monument(&mut erased, 100, 100, 1.0, false);
+        draw_monument(&mut recovered, 100, 100, 1.0, true);
+        assert_ne!(erased.as_rgba8(), recovered.as_rgba8());
     }
 
     #[test]
