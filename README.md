@@ -28,7 +28,8 @@ Pre-requis : Rust 1.97.1, environnement natif compatible avec GPE et
 dependances systeme requises par le moteur.
 
 ```bash
-cargo run
+cargo generate-lockfile
+cargo run --locked
 ```
 
 Commandes dans le jeu :
@@ -47,12 +48,12 @@ raisonne librement. Si tu bloques, note simplement ce qui t'a intrigue.
 
 ```bash
 cargo fmt --all -- --check
-cargo check --all-targets
-cargo test --all-targets
-cargo clippy --all-targets -- -D warnings
+cargo check --locked --all-targets
+cargo test --locked --all-targets
+cargo clippy --locked --all-targets --all-features -- -D warnings
 ```
 
-Le prototype utilise l'API publique du moteur GPE sur une revision Git
+Le `Cargo.lock` n'est pas encore versionne ; une resolution provisoire est generee\navant les controles. La generation puis le commit du lockfile sont requis avant\nde considerer la beta reproductible.\n\nLe prototype utilise l'API publique du moteur GPE sur une revision Git
 pointee dans `Cargo.toml`. Aucun changement du moteur n'est requis
 par la conception du prototype.
 
