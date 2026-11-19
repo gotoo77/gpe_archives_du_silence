@@ -18,13 +18,8 @@ jobs:
         with:
           toolchain: "1.97.1"
           components: rustfmt, clippy
-      - name: Resolve provisional dependency lock
-        run: cargo generate-lockfile
-      - name: Export provisional lockfile for reproducibility fix
-        run: |
-          echo '__ARCHIVES_LOCK_START__'
-          cat Cargo.lock
-          echo '__ARCHIVES_LOCK_END__'
+      - name: Require committed Cargo.lock
+        run: test -s Cargo.lock
       - name: Formatting all Rust sources
         run: cargo fmt --all -- --check
       - name: Compile all targets
