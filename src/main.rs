@@ -1143,7 +1143,10 @@ mod tests {
             let end = ((row + 1) * 640) * 4;
             assert_eq!(&rendered[start..end], &untouched[start..end]);
         }
-        assert!(rendered != untouched, "the inscription must render actual rune pixels");
+        assert!(
+            rendered != untouched,
+            "the inscription must render actual rune pixels"
+        );
     }
 
     #[test]
