@@ -1,53 +1,48 @@
-# Le Signal muet - Fiche joueur (test papier v0.1)
+# Le Signal muet - Fiche joueur papier v0.2
 
-> **À donner au testeur sans la spécification ni la review.**
+> **À remettre au joueur seul, sans la spécification ni la review.**
 >
-> Prototype sur papier : cette fiche ne représente pas encore un jeu fonctionnel. Le modérateur simule la réaction des machines à chaque tentative. Ne pas révéler les réponses attendues.
+> Il ne s'agit pas encore d'un jeu logiciel. Une personne simule les réactions des dispositifs au fur et à mesure des essais.
 
-## Situation
+## Tu pénètres dans une salle abandonnée
 
-Tu entres dans une salle abandonnée. Des machines très anciennes fonctionnent encore. Leurs panneaux utilisent **cinq glyphes inconnus** :
+Deux lampes d'un même modèle éclairent inégalement l'endroit. Une pompe ancienne fonctionne en continu : sa vapeur forme un rideau opaque devant le pupitre d'une porte fermée.
+
+Sur chaque dispositif, un bandeau affiche **deux signes** que tu ne connais pas.
+
+Tu vois cinq signes distincts :
 
 **△　○　◇　□　⬡**
 
-Chaque machine possède un bandeau montrant les deux symboles de la dernière commande enregistrée.
+| Ce que tu observes | Les deux signes visibles |
+| --- | --- |
+| Lampe gauche **allumée** | `△ ◇` |
+| Lampe droite **éteinte** | `○ ◇` |
+| Pompe **en marche** | `△ □` |
+| Porte **fermée** | `○ ⬡` |
 
-La vapeur d'une pompe masque le pupitre de la porte. Tu peux voir l'inscription fixée au-dessus de la porte, mais tu ne peux pas encore atteindre son pupitre.
+La pompe possède un pupitre à deux emplacements. Un autre pupitre est visible derrière le rideau de vapeur, à côté de la porte. Chacun est relié physiquement à son appareil.
 
-## Ce que tu observes
+Ton objectif : **trouver un moyen de quitter cette salle**.
 
-| Dispositif | Ce qui se passe | Bandeau |
-| --- | --- | --- |
-| Lampe gauche | Elle est **allumée** | `△ ◇` |
-| Lampe droite (même modèle) | Elle est **éteinte** | `○ ◇` |
-| Pompe | Elle **fonctionne** et projette de la vapeur | `△ □` |
-| Porte | Elle est **fermée** | `○ ⬡` |
+Tu peux observer, réfléchir, dessiner et tenter des combinaisons de deux signes sur un pupitre accessible. À chaque essai, la personne qui anime le test décrit seulement ce que tu vois se produire.
 
-Deux pupitres permettent d'envoyer une nouvelle commande sous la forme de **deux glyphes** choisis parmi les cinq symboles.
+Aucune minuterie. Aucun indice extérieur nécessaire.
 
-## Ton objectif
+### Tes notes (facultatives)
 
-1. Trouver la commande qui pourrait **arrêter la pompe** et dissiper la vapeur.
-2. Une fois le pupitre de la porte accessible, trouver la commande qui pourrait **ouvrir la porte**.
+Ce que je remarque :
 
-Tu peux réfléchir à voix haute et noter tes hypothèses. Il n'y a pas de compte à rebours.
+___________________________________________________
 
-### Commande proposée pour la pompe
+Mon hypothèse :
 
-`[     ] [     ]`
+___________________________________________________
 
-Pourquoi cette commande ? ___________________________________
+Première combinaison tentée : `[       ] [       ]`
 
-### Commande proposée pour la porte
-
-`[     ] [     ]`
-
-Pourquoi cette commande ? ___________________________________
-
-## Après la tentative
-
-Le modérateur demandera ce que tu as compris du fonctionnement des glyphes. Il n'est pas nécessaire d'avoir « deviné » chaque traduction française ; explique simplement les relations que tu crois avoir découvertes.
+Seconde combinaison tentée : `[       ] [       ]`
 
 ---
 
-*Fin de la fiche joueur. Ne pas ajouter les solutions dans ce document.*
+*Fin de la fiche. Le sens des signes et les solutions sont réservés au modérateur.*
