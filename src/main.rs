@@ -713,7 +713,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     fb.draw_line(x + 5, y + 4, x + 5, floor, DUST);
     fb.draw_line(x + w - 6, y + 4, x + w - 6, floor, DUST);
     let unit = if h >= 110 { 2 } else { 1 };
-    let base = y + h - 17;
+    let base = y + h - 12;
     let ax = x + w / 3;
     let px = x + w * 2 / 3;
     let phase = (time * 1.65).sin();
@@ -1121,6 +1121,20 @@ mod tests {
         game.handle_click(220, 264, &mut audio);
         assert_eq!(game.archive.page(), Page::Hall);
         assert_eq!(game.archive.witness_scene(), Some(2));
+    }
+
+    #[test]
+    fn projected_figures_stay_inside_scene_top_edge() {
+        let empty = Framebuffer::new(640, 360);
+        for scene in [(0, 3, 4), (1, 4, 5), (2, 3, 5)] {
+            let mut fb = Framebuffer::new(640, 360);
+            draw_scene(&mut fb, 40, 40, 405, 48, scene, 1.0);
+            assert_eq!(
+                &fb.as_rgba8()[..40 * 640 * 4],
+                &empty.as_rgba8()[..40 * 640 * 4],
+                "scene art must not overflow the tile above"
+            );
+        }
     }
 
     #[test]
