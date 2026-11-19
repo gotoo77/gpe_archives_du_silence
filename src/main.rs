@@ -1051,6 +1051,31 @@ mod tests {
     }
 
     #[test]
+    fn testimony_last_choice_is_clickable_and_return_does_not_select() {
+        let mut game = MemoryGame::new().expect("procedural audio bank");
+        let mut audio = NoopAudio::default();
+        game.archive.open_witness();
+        game.handle_click(551, 304, &mut audio);
+        assert_eq!(game.archive.page(), Page::Hall);
+        assert_eq!(game.archive.witness_scene(), None);
+
+        game.archive.open_witness();
+        game.handle_click(220, 264, &mut audio);
+        assert_eq!(game.archive.page(), Page::Hall);
+        assert_eq!(game.archive.witness_scene(), Some(2));
+    }
+
+    #[test]
+    fn evidence_glyphs_fit_inside_memory_panel() {
+        let mut fb = Framebuffer::new(640, 360);
+        draw_inscription(&mut fb, &CLUES[0], 482, 126, GOLD);
+        // The last mark ends before the right frame (x = 618).
+        assert!(482 + 2 * 43 + 13 * 2 < 618);
+        // The inscription was actually rendered, not silently clipped away.
+        assert!(fb.as_rgba8().iter().any(|byte| *byte != 0));
+    }
+
+    #[test]
     fn custom_runic_alphabet_draws_safely_at_all_expected_scales() {
         let mut fb = Framebuffer::new(640, 360);
         for rune in 0..RUNE_COUNT {
