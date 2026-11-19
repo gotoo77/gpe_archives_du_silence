@@ -47,7 +47,10 @@ impl AudioCues {
             return;
         }
         self.initialized = true;
-        match self.bank.start_loop_on_bus(audio, AMBIENCE, AudioBus::Music) {
+        match self
+            .bank
+            .start_loop_on_bus(audio, AMBIENCE, AudioBus::Music)
+        {
             Ok(playback) => self._loop_playback = Some(playback),
             Err(_) => self.failed = true,
         }
@@ -137,7 +140,11 @@ mod tests {
                 .chunks_exact(2)
                 .map(|pair| i16::from_le_bytes([pair[0], pair[1]]))
                 .collect::<Vec<_>>();
-            let max = samples.iter().map(|sample| i32::from(*sample).abs()).max().unwrap_or(0);
+            let max = samples
+                .iter()
+                .map(|sample| i32::from(*sample).abs())
+                .max()
+                .unwrap_or(0);
             assert!(max < 15_000, "clip peak must stay well below full scale");
             assert!(i32::from(samples[0]).abs() < 600);
             assert!(i32::from(*samples.last().expect("sample")).abs() < 600);
