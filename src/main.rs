@@ -1,20 +1,24 @@
-//! Blind-test presentation. Do not read src/lib.rs or design documents before playing.
+//! Spoiler-safe native presentation for the first playable room.
+mod audio_cues;
+
 use archives_du_silence::{Console, Reaction, World};
+use audio_cues::{AudioCues, Cue};
 use gotoo_pixel_engine::{
-    EngineConfig, EngineError, Frame, Framebuffer, Game, GameResult, Key, Pixel, run,
+    EngineConfig, Frame, Framebuffer, Game, GameResult, Key, Pixel, run,
 };
 
-const WIDTH: u32 = 320;
-const HEIGHT: u32 = 180;
-const BG: Pixel = Pixel::rgb(8, 12, 20);
-const WALL: Pixel = Pixel::rgb(18, 27, 40);
-const STONE: Pixel = Pixel::rgb(37, 52, 65);
-const METAL: Pixel = Pixel::rgb(72, 101, 110);
-const TEXT: Pixel = Pixel::rgb(213, 228, 221);
-const MUTED: Pixel = Pixel::rgb(123, 150, 158);
-const LIGHT: Pixel = Pixel::rgb(252, 211, 125);
-const ACCENT: Pixel = Pixel::rgb(104, 226, 213);
-const DARK: Pixel = Pixel::rgb(5, 18, 26);
+const WIDTH: u32 = 640;
+const HEIGHT: u32 = 360;
+const BG: Pixel = Pixel::rgb(7, 13, 22);
+const WALL: Pixel = Pixel::rgb(15, 26, 40);
+const STONE: Pixel = Pixel::rgb(33, 49, 65);
+const METAL: Pixel = Pixel::rgb(76, 111, 126);
+const TEXT: Pixel = Pixel::rgb(218, 236, 230);
+const MUTED: Pixel = Pixel::rgb(131, 160, 166);
+const LIGHT: Pixel = Pixel::rgb(253, 213, 121);
+const ACCENT: Pixel = Pixel::rgb(100, 225, 210);
+const DARK: Pixel = Pixel::rgb(6, 17, 29);
+const STEAM: Pixel = Pixel::rgb(93, 123, 129);
 
 struct FirstRoom {
     world: World,
@@ -23,28 +27,48 @@ struct FirstRoom {
     slot: usize,
     message: &'static str,
     elapsed: f32,
+    help: bool,
+    sounds: AudioCues,
 }
 
-impl Default for FirstRoom {
-    fn default() -> Self {
-        Self {
+impl FirstRoom {
+    fn new() -> Result<Self, gotoo_pixel_engine::AudioError> {
+        Ok(Self {
             world: World::default(),
             console: Console::First,
             symbols: [0, 0],
             slot: 0,
-            message: "OBSERVEZ LES MACHINES.",
+            message: "OBSERVEZ LES LIEUX.",
             elapsed: 0.0,
-        }
+            help: false,
+            sounds: AudioCues::new()?,
+        })
+    }
+
+    fn reset(&mut self) {
+        self.world = World::default();
+        self.console = Console::First;
+        self.symbols = [0, 0];
+        self.slot = 0;
+        self.message = "OBSERVEZ LES LIEUX.";
+        self.elapsed = 0.0;
+        self.help = false;
     }
 }
 
 impl Game for FirstRoom {
     fn update(&mut self, frame: &mut Frame<'_>) -> GameResult {
+        self.sounds.ensure_ambience(frame.audio);
         if frame.input.key(Key::Escape).pressed() {
             return GameResult::Exit;
         }
+        if frame.input.key(Key::H).pressed() {
+            self.help = !self.help;
+            self.sounds.play(frame.audio, Cue::Tick);
+        }
         if frame.input.key(Key::R).pressed() {
-            *self = Self::default();
+            self.reset();
+            self.sounds.play(frame.audio, Cue::Tick);
         } else if !self.world.second_active() {
             if frame.input.key(Key::Tab).pressed() {
                 if self.world.accessible(Console::Second) {
@@ -53,29 +77,52 @@ impl Game for FirstRoom {
                         Console::Second => Console::First,
                     };
                     self.message = "UN AUTRE PUPITRE.";
+                    self.sounds.play(frame.audio, Cue::Tick);
                 } else {
-                    self.message = "LE PASSAGE EST OBSTRUE.";
+                    self.message = "L'ACCES EST OBSTRUE.";
+                    self.sounds.play(frame.audio, Cue::Reject);
                 }
             }
             if frame.input.key(Key::Left).pressed() {
                 self.slot = 0;
+                self.sounds.play(frame.audio, Cue::Tick);
             }
             if frame.input.key(Key::Right).pressed() {
                 self.slot = 1;
+                self.sounds.play(frame.audio, Cue::Tick);
             }
             if frame.input.key(Key::Up).pressed() {
                 self.symbols[self.slot] = (self.symbols[self.slot] + 1) % 5;
+                self.sounds.play(frame.audio, Cue::Tick);
             }
             if frame.input.key(Key::Down).pressed() {
                 self.symbols[self.slot] = (self.symbols[self.slot] + 4) % 5;
+                self.sounds.play(frame.audio, Cue::Tick);
             }
             if frame.input.key(Key::Enter).pressed() {
-                self.message = match self.world.submit(self.console, self.symbols) {
-                    Reaction::Changed => "LE MONDE A REAGI.",
-                    Reaction::Unchanged => "AUCUN CHANGEMENT VISIBLE.",
-                    Reaction::Invalid => "AUCUNE REACTION.",
-                    Reaction::Inaccessible => "INACCESSIBLE.",
-                };
+                match self.world.submit(self.console, self.symbols) {
+                    Reaction::Changed => {
+                        self.message = "QUELQUE CHOSE A CHANGE.";
+                        let cue = if self.world.second_active() {
+                            Cue::Discovery
+                        } else {
+                            Cue::Shift
+                        };
+                        self.sounds.play(frame.audio, cue);
+                    }
+                    Reaction::Unchanged => {
+                        self.message = "AUCUN CHANGEMENT VISIBLE.";
+                        self.sounds.play(frame.audio, Cue::Reject);
+                    }
+                    Reaction::Invalid => {
+                        self.message = "AUCUNE REACTION.";
+                        self.sounds.play(frame.audio, Cue::Reject);
+                    }
+                    Reaction::Inaccessible => {
+                        self.message = "INACCESSIBLE.";
+                        self.sounds.play(frame.audio, Cue::Reject);
+                    }
+                }
             }
         }
         self.elapsed += frame.delta_time.as_secs_f32().min(0.10);
@@ -87,172 +134,226 @@ impl Game for FirstRoom {
 impl FirstRoom {
     fn draw(&self, fb: &mut Framebuffer) {
         fb.clear(BG);
-        fb.draw_text(8, 7, "LES ARCHIVES DU SILENCE", TEXT);
-        fb.draw_text(267, 7, "01", MUTED);
-        fb.draw_line(8, 20, 311, 20, STONE);
+        fb.draw_text_scaled(22, 12, "LES ARCHIVES DU SILENCE", 2, TEXT);
+        fb.draw_text(578, 14, "001", MUTED);
+        fb.draw_text(546, 30, "H: AIDE", MUTED);
+        fb.draw_line(20, 42, 619, 42, STONE);
 
-        fb.fill_rect(8, 25, 304, 96, WALL);
-        fb.draw_rect(8, 25, 304, 96, METAL);
-        for i in 0..12 {
-            let x = 14 + i * 25;
-            fb.draw_line(x, 25, x + 12, 32, STONE);
-            fb.draw_line(x, 113, x + 10, 121, STONE);
+        self.draw_room(fb);
+        self.draw_compact_hud(fb);
+        if self.help {
+            self.draw_help(fb);
         }
-        fb.fill_rect(9, 116, 302, 5, STONE);
-        fb.draw_line(9, 112, 310, 112, METAL);
-
-        draw_lamp(fb, 46, true, [0, 2]);
-        draw_lamp(fb, 94, false, [1, 2]);
-        draw_machine(fb, self.world.first_active());
-        draw_door(fb, self.world.second_active());
-
-        if self.world.first_active() {
-            // Obstruction is drawn in the foreground between the two consoles.
-            let drift = (self.elapsed * 4.0).floor() as i32 % 4;
-            for i in 0..5 {
-                let y = 43 + i * 13 + drift;
-                fb.fill_rect(201 + (i % 2) * 7, y, 47, 6, Pixel::rgb(89, 112, 116));
-                fb.fill_rect(211 + (i % 3) * 5, y + 6, 39, 4, Pixel::rgb(61, 83, 90));
-            }
-        } else {
-            fb.draw_line(189, 94, 236, 103, ACCENT);
-            fb.draw_line(235, 102, 242, 102, ACCENT);
-        }
-
-        if self.world.second_active() {
-            fb.fill_rect(11, 32, 298, 84, DARK);
-            fb.draw_rect(36, 52, 248, 56, ACCENT);
-            fb.draw_text_scaled(59, 65, "LE PASSAGE EST OUVERT", 1, TEXT);
-            fb.draw_text(66, 87, "VOUS AVEZ DECOUVERT LE SIGNAL.", ACCENT);
-        }
-
-        self.draw_controls(fb);
     }
 
-    fn draw_controls(&self, fb: &mut Framebuffer) {
-        fb.fill_rect(7, 126, 306, 49, DARK);
-        fb.draw_rect(7, 126, 306, 49, METAL);
+    fn draw_room(&self, fb: &mut Framebuffer) {
+        fb.fill_rect(20, 51, 600, 254, WALL);
+        fb.draw_rect(20, 51, 600, 254, METAL);
+
+        for i in 0..17 {
+            let x = 32 + i * 34;
+            fb.draw_line(x, 51, x + 20, 65, STONE);
+        }
+        for i in 0..9 {
+            let x = 38 + i * 65;
+            fb.draw_line(x, 54, x, 266, Pixel::rgb(22, 35, 49));
+        }
+        fb.fill_rect(21, 267, 598, 20, STONE);
+        fb.draw_line(21, 266, 617, 266, METAL);
+        for i in 0..18 {
+            let x = 32 + i * 33;
+            fb.draw_line(x, 269, x + 14, 286, WALL);
+        }
+
+        draw_lamp(fb, 124, true, [0, 2]);
+        draw_lamp(fb, 240, false, [1, 2]);
+        draw_machine(fb, self.world.first_active(), self.elapsed);
+        draw_door(fb, self.world.second_active());
+
+        // The vapor blocks the physical way to the remote console.
+        if self.world.first_active() {
+            let drift = (self.elapsed * 14.0).floor() as i32 % 17;
+            for i in 0..9 {
+                let y = 100 + i * 16 + drift;
+                let x = 424 + (i % 3) * 7;
+                fb.fill_rect(x, y, 83, 10, STEAM);
+                fb.fill_rect(x + 10, y + 10, 70, 5, METAL);
+            }
+        } else {
+            fb.draw_line(410, 227, 484, 244, ACCENT);
+            fb.draw_line(485, 244, 513, 244, METAL);
+        }
+
         if self.world.second_active() {
-            fb.draw_text(15, 136, "FIN DU PROTOTYPE 001", LIGHT);
-            fb.draw_text(15, 154, "R: RECOMMENCER    ESC: QUITTER", MUTED);
+            fb.fill_rect(105, 104, 429, 100, DARK);
+            fb.draw_rect(105, 104, 429, 100, ACCENT);
+            fb.draw_text_scaled(140, 125, "LE PASSAGE EST OUVERT", 2, LIGHT);
+            fb.draw_text_scaled(173, 169, "LE SIGNAL A REPONDU.", 1, ACCENT);
+        }
+    }
+
+    fn draw_compact_hud(&self, fb: &mut Framebuffer) {
+        fb.fill_rect(21, 309, 598, 47, DARK);
+        fb.draw_line(21, 309, 618, 309, METAL);
+        if self.world.second_active() {
+            fb.draw_text_scaled(40, 321, "FIN DU PROTOTYPE", 2, TEXT);
+            fb.draw_text(443, 331, "R: REJOUER", MUTED);
             return;
         }
-        let label = match self.console {
+
+        let console = match self.console {
             Console::First => "PUPITRE 1",
             Console::Second => "PUPITRE 2",
         };
-        fb.draw_text(14, 132, label, TEXT);
+        fb.draw_text_scaled(37, 324, console, 2, TEXT);
         for index in 0..2 {
-            let x = 108 + 35 * index as i32;
-            fb.fill_rect(x, 130, 27, 22, WALL);
+            let x = 201 + index as i32 * 54;
+            fb.fill_rect(x, 315, 42, 38, STONE);
             fb.draw_rect(
                 x,
-                130,
-                27,
-                22,
+                315,
+                42,
+                38,
                 if self.slot == index { ACCENT } else { METAL },
             );
-            draw_glyph(fb, self.symbols[index], x + 7, 134, TEXT);
+            draw_glyph(fb, self.symbols[index], x + 8, 323, 2, TEXT);
         }
-        fb.draw_text(193, 136, "ENTREE: ESSAI", TEXT);
-        fb.draw_text(
-            14,
-            155,
-            self.message,
-            if self.message.contains("REAGI") {
-                ACCENT
-            } else {
-                MUTED
-            },
-        );
-        fb.draw_text(14, 166, "FLECHES: CHOIX   TAB: PUPITRE   R: RESET", MUTED);
+
+        fb.draw_text(331, 317, "ENTREE: ESSAI", MUTED);
+        fb.draw_text(331, 331, self.message, TEXT);
+        if self.sounds.unavailable() {
+            fb.draw_text(501, 346, "AUDIO INDISPO", LIGHT);
+        }
+    }
+
+    fn draw_help(&self, fb: &mut Framebuffer) {
+        fb.fill_rect(129, 66, 391, 143, DARK);
+        fb.draw_rect(129, 66, 391, 143, ACCENT);
+        fb.draw_text_scaled(153, 86, "COMMANDES", 2, LIGHT);
+        fb.draw_text_scaled(153, 117, "GAUCHE / DROITE : CASE", 1, TEXT);
+        fb.draw_text_scaled(153, 134, "HAUT / BAS : SYMBOLE", 1, TEXT);
+        fb.draw_text_scaled(153, 151, "ENTREE : ESSAYER", 1, TEXT);
+        fb.draw_text_scaled(153, 168, "TAB : AUTRE PUPITRE", 1, TEXT);
+        fb.draw_text_scaled(153, 185, "R : RESET     H : FERMER", 1, MUTED);
     }
 }
 
 fn glyph_band(fb: &mut Framebuffer, x: i32, y: i32, symbols: [usize; 2]) {
-    fb.fill_rect(x, y, 36, 17, DARK);
-    fb.draw_rect(x, y, 36, 17, METAL);
-    draw_glyph(fb, symbols[0], x + 3, y + 2, ACCENT);
-    draw_glyph(fb, symbols[1], x + 20, y + 2, ACCENT);
+    fb.fill_rect(x, y, 73, 29, DARK);
+    fb.draw_rect(x, y, 73, 29, METAL);
+    draw_glyph(fb, symbols[0], x + 7, y + 5, 2, ACCENT);
+    draw_glyph(fb, symbols[1], x + 39, y + 5, 2, ACCENT);
 }
 
-fn draw_glyph(fb: &mut Framebuffer, glyph: usize, x: i32, y: i32, color: Pixel) {
+fn draw_glyph(fb: &mut Framebuffer, glyph: usize, x: i32, y: i32, scale: i32, color: Pixel) {
+    let p = |dx: i32, dy: i32| (x + dx * scale, y + dy * scale);
+    let mut line = |a: (i32, i32), b: (i32, i32)| {
+        let (x0, y0) = p(a.0, a.1);
+        let (x1, y1) = p(b.0, b.1);
+        fb.draw_line(x0, y0, x1, y1, color);
+    };
     match glyph {
         0 => {
-            fb.draw_line(x + 6, y, x, y + 12, color);
-            fb.draw_line(x, y + 12, x + 12, y + 12, color);
-            fb.draw_line(x + 12, y + 12, x + 6, y, color);
+            line((6, 0), (0, 12));
+            line((0, 12), (12, 12));
+            line((12, 12), (6, 0));
         }
-        1 => fb.draw_circle(x + 6, y + 6, 6, color),
+        1 => {
+            // Diamond-like octagon for clarity at variable logical resolutions.
+            for (a, b) in [
+                ((4, 0), (9, 0)),
+                ((9, 0), (12, 4)),
+                ((12, 4), (12, 9)),
+                ((12, 9), (9, 12)),
+                ((9, 12), (4, 12)),
+                ((4, 12), (0, 9)),
+                ((0, 9), (0, 4)),
+                ((0, 4), (4, 0)),
+            ] {
+                line(a, b);
+            }
+        }
         2 => {
-            fb.draw_line(x + 6, y, x + 12, y + 6, color);
-            fb.draw_line(x + 12, y + 6, x + 6, y + 12, color);
-            fb.draw_line(x + 6, y + 12, x, y + 6, color);
-            fb.draw_line(x, y + 6, x + 6, y, color);
+            line((6, 0), (12, 6));
+            line((12, 6), (6, 12));
+            line((6, 12), (0, 6));
+            line((0, 6), (6, 0));
         }
         3 => {
-            fb.draw_rect(x, y, 12, 12, color);
-            fb.fill_rect(x + 5, y + 2, 3, 9, color);
+            line((0, 0), (12, 0));
+            line((12, 0), (12, 12));
+            line((12, 12), (0, 12));
+            line((0, 12), (0, 0));
+            line((4, 2), (4, 10));
         }
         _ => {
-            fb.draw_line(x + 3, y, x + 9, y, color);
-            fb.draw_line(x + 9, y, x + 12, y + 6, color);
-            fb.draw_line(x + 12, y + 6, x + 9, y + 12, color);
-            fb.draw_line(x + 9, y + 12, x + 3, y + 12, color);
-            fb.draw_line(x + 3, y + 12, x, y + 6, color);
-            fb.draw_line(x, y + 6, x + 3, y, color);
+            line((3, 0), (9, 0));
+            line((9, 0), (12, 6));
+            line((12, 6), (9, 12));
+            line((9, 12), (3, 12));
+            line((3, 12), (0, 6));
+            line((0, 6), (3, 0));
         }
     }
 }
 
 fn draw_lamp(fb: &mut Framebuffer, x: i32, lit: bool, symbols: [usize; 2]) {
-    fb.draw_line(x, 72, x, 88, METAL);
-    fb.fill_rect(x - 8, 71, 16, 6, STONE);
-    fb.draw_circle(x, 58, 9, if lit { LIGHT } else { METAL });
+    fb.fill_rect(x - 11, 186, 22, 12, STONE);
+    fb.draw_line(x, 168, x, 219, METAL);
+    fb.draw_circle(x, 141, 22, if lit { LIGHT } else { METAL });
+    fb.fill_circle(x, 141, 13, if lit { LIGHT } else { DARK });
     if lit {
-        fb.fill_circle(x, 58, 5, LIGHT);
-        fb.draw_line(x - 13, 58, x - 18, 58, LIGHT);
-        fb.draw_line(x + 13, 58, x + 18, 58, LIGHT);
-    } else {
-        fb.fill_circle(x, 58, 5, DARK);
+        for (dx, dy) in [(-32, 0), (32, 0), (0, -32)] {
+            fb.draw_line(x + dx / 2, 141 + dy / 2, x + dx, 141 + dy, LIGHT);
+        }
     }
-    glyph_band(fb, x - 18, 92, symbols);
+    glyph_band(fb, x - 37, 223, symbols);
 }
 
-fn draw_machine(fb: &mut Framebuffer, active: bool) {
-    fb.fill_rect(145, 65, 51, 35, STONE);
-    fb.draw_rect(145, 65, 51, 35, METAL);
-    fb.draw_circle(169, 81, 12, METAL);
-    fb.fill_circle(169, 81, 7, if active { LIGHT } else { DARK });
-    fb.fill_rect(179, 70, 14, 8, if active { ACCENT } else { MUTED });
-    fb.fill_rect(152, 102, 39, 10, STONE);
-    glyph_band(fb, 150, 44, if active { [0, 3] } else { [1, 3] });
-    fb.draw_line(167, 100, 167, 112, METAL);
+fn draw_machine(fb: &mut Framebuffer, active: bool, elapsed: f32) {
+    glyph_band(fb, 317, 77, if active { [0, 3] } else { [1, 3] });
+    fb.fill_rect(299, 145, 117, 92, STONE);
+    fb.draw_rect(299, 145, 117, 92, METAL);
+    fb.draw_circle(355, 188, 30, METAL);
+    fb.fill_circle(355, 188, 18, if active { LIGHT } else { DARK });
+    if active {
+        let pulse = if (elapsed * 3.0) as i32 % 2 == 0 {
+            ACCENT
+        } else {
+            LIGHT
+        };
+        fb.fill_rect(392, 158, 16, 18, pulse);
+    } else {
+        fb.draw_rect(392, 158, 16, 18, MUTED);
+    }
+    fb.fill_rect(320, 240, 83, 25, STONE);
+    fb.draw_line(350, 237, 350, 265, METAL);
 }
 
 fn draw_door(fb: &mut Framebuffer, open: bool) {
-    fb.fill_rect(259, 45, 41, 69, STONE);
-    fb.draw_rect(259, 45, 41, 69, METAL);
+    glyph_band(fb, 528, 75, if open { [0, 4] } else { [1, 4] });
+    fb.fill_rect(524, 118, 84, 147, STONE);
+    fb.draw_rect(524, 118, 84, 147, METAL);
+    fb.fill_rect(534, 129, 64, 134, DARK);
     if open {
-        fb.fill_rect(266, 53, 27, 59, DARK);
-        fb.draw_line(266, 53, 294, 53, ACCENT);
+        fb.draw_line(536, 130, 593, 130, ACCENT);
+        fb.draw_line(536, 131, 536, 260, ACCENT);
     } else {
-        fb.fill_rect(267, 52, 25, 60, DARK);
-        fb.draw_line(279, 52, 279, 112, METAL);
-        fb.fill_rect(269, 82, 21, 3, LIGHT);
+        fb.draw_line(565, 130, 565, 260, METAL);
+        fb.fill_rect(548, 207, 34, 6, LIGHT);
     }
-    glyph_band(fb, 261, 29, if open { [0, 4] } else { [1, 4] });
 }
 
-fn main() -> Result<(), EngineError> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     run(
         EngineConfig {
             title: "Les Archives du Silence - Prototype 001".into(),
             framebuffer_width: WIDTH,
             framebuffer_height: HEIGHT,
-            window_width: WIDTH * 3,
-            window_height: HEIGHT * 3,
+            window_width: 1280,
+            window_height: 720,
         },
-        FirstRoom::default(),
-    )
+        FirstRoom::new()?,
+    )?;
+    Ok(())
 }
