@@ -29,13 +29,12 @@ Aucun dictionnaire de glyphes n'est donne ici.
 ### Lancement natif
 
 ```powershell
-cargo generate-lockfile
 cargo run --locked
 ```
 
-Le `Cargo.lock` n'est pas encore commite sur cette branche de developpement :
-la compilation fonctionne apres resolution locale, mais elle n'est pas
-pleinement reproductible. Ne pas annoncer la validation du lockfile.
+Le `Cargo.lock` est versionne pour figer la resolution des dependances.
+La CI exige ce fichier et refuse de regenerer automatiquement le graphe.
+`cargo generate-lockfile` n'est donc pas necessaire pour un simple lancement.
 
 ### Controles de jeu
 
