@@ -124,7 +124,7 @@ impl MemoryGame {
                     self.activate_hall(6, audio);
                 } else if hit(x, y, 542, 229, 74, 35) {
                     self.activate_hall(7, audio);
-                } else if hit(x, y, 522, 329, 99, 27) {
+                } else if hit(x, y, 502, 289, 116, 30) {
                     self.seal(audio);
                 }
             }
@@ -297,7 +297,7 @@ impl MemoryGame {
         draw_button(fb, 542, 229, 74, 35, "ECRIRE", self.archive.focus() == 7);
         fb.draw_text(475, 271, "MEMOIRE BRISEE", DIM);
         fb.draw_text(469, 283, "DEUX TRACES", DIM);
-        draw_button(fb, 522, 329, 99, 27, "SCELLER [S]", false);
+        draw_button(fb, 502, 289, 116, 30, "SCELLER [S]", false);
     }
 
     fn draw_clip(&self, fb: &mut Framebuffer, index: usize) {
@@ -385,6 +385,12 @@ impl MemoryGame {
 impl Game for MemoryGame {
     fn update(&mut self, frame: &mut Frame<'_>) -> GameResult {
         self.sounds.ensure_ambience(frame.audio);
+        if frame.input.key(Key::Escape).pressed()
+            && self.archive.page() == Page::Hall
+            && !self.help
+        {
+            return GameResult::Exit;
+        }
         self.keyboard(frame);
         if frame.input.mouse_button(MouseButton::Left).pressed()
             && let Some((x, y)) = frame.input.mouse_position()
