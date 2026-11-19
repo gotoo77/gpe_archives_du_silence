@@ -124,7 +124,7 @@ impl MemoryGame {
                     self.activate_hall(6, audio);
                 } else if hit(x, y, 542, 229, 74, 35) {
                     self.activate_hall(7, audio);
-                } else if hit(x, y, 502, 289, 116, 30) {
+                } else if hit(x, y, 502, 294, 116, 25) {
                     self.seal(audio);
                 }
             }
@@ -136,12 +136,12 @@ impl MemoryGame {
             }
             Page::Witness => {
                 for option in 0..3 {
-                    if hit(x, y, 70, 127 + option as i32 * 61, 500, 55) {
+                    if hit(x, y, 70, 119 + option as i32 * 58, 500, 55) {
                         self.pick_witness(option, audio);
                         return;
                     }
                 }
-                if hit(x, y, 500, 298, 112, 30) {
+                if hit(x, y, 500, 294, 112, 26) {
                     self.archive.back();
                 }
             }
@@ -309,9 +309,9 @@ impl MemoryGame {
         draw_monument(fb, 467, 87, self.elapsed, false);
         draw_button(fb, 464, 229, 74, 35, "LIRE", self.archive.focus() == 6);
         draw_button(fb, 542, 229, 74, 35, "ECRIRE", self.archive.focus() == 7);
-        fb.draw_text(475, 271, "MEMOIRE BRISEE", DIM);
-        fb.draw_text(469, 283, "DEUX TRACES", DIM);
-        draw_button(fb, 502, 289, 116, 30, "SCELLER [S]", false);
+        fb.draw_text(475, 270, "MEMOIRE BRISEE", DIM);
+        fb.draw_text(475, 281, "DEUX TRACES", DIM);
+        draw_button(fb, 502, 294, 116, 25, "SCELLER [S]", false);
     }
 
     fn draw_clip(&self, fb: &mut Framebuffer, index: usize) {
@@ -335,7 +335,7 @@ impl MemoryGame {
         draw_scene(fb, 49, 143, 383, 135, event_for_clip(index), self.elapsed);
         fb.draw_text(478, 90, "TRACE INSCRITE", DIM);
         fb.draw_line(477, 105, 612, 105, EDGE);
-        draw_sentence(fb, &CLUES[index], 480, 124, 2, GOLD);
+        draw_inscription(fb, &CLUES[index], 482, 126, GOLD);
         fb.draw_text(479, 208, "COMPARER LES", IVORY);
         fb.draw_text(479, 221, "MEMOIRES.", IVORY);
         fb.draw_text(479, 239, "< > : FRAGMENTS", DIM);
@@ -348,7 +348,7 @@ impl MemoryGame {
         fb.draw_text(42, 106, "QUEL EVENEMENT CE TEXTE DECRIT-IL ?", DIM);
         draw_sentence(fb, &archives_du_silence::WITNESS, 457, 75, 1, GOLD);
         for option in 0..3 {
-            let y = 127 + option as i32 * 61;
+            let y = 119 + option as i32 * 58;
             let active = self.testimony_focus == option;
             fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
             fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
@@ -373,7 +373,8 @@ impl MemoryGame {
                 self.elapsed,
             );
         }
-        fb.draw_text(72, 316, "ENTREE OU CLIC : RETENIR UNE HYPOTHESE", DIM);
+        fb.draw_text(72, 305, "CHOISIR UNE INTERPRETATION", DIM);
+        draw_button(fb, 500, 294, 112, 26, "RETOUR", false);
     }
 
     fn draw_restore(&self, fb: &mut Framebuffer) {
@@ -468,8 +469,9 @@ fn draw_room(fb: &mut Framebuffer, elapsed: f32) {
     fb.clear(INK);
     fb.fill_rect(0, 0, WIDTH, 52, DEEP);
     fb.draw_line(0, 52, 639, 52, GOLD);
-    fb.draw_text_scaled(24, 13, "LES ARCHIVES DU SILENCE", 2, IVORY);
-    fb.draw_text(539, 16, "FRAGMENT 002", GOLD);
+    fb.draw_text(23, 15, "LES ARCHIVES DU SILENCE", IVORY);
+    fb.draw_text(23, 30, "LES REMANENCES", GOLD);
+    fb.draw_text(539, 20, "FRAGMENT 002", GOLD);
     fb.fill_rect(14, 60, 612, 259, STONE);
     for i in 0..19 {
         let x = 22 + i * 31;
@@ -652,6 +654,15 @@ fn draw_sentence(
     }
 }
 
+// The three engraved runes fit inside the evidence panel.
+fn draw_inscription(fb: &mut Framebuffer, sentence: &[u8; 3], x: i32, y: i32, color: Pixel) {
+    for (index, rune) in sentence.iter().copied().enumerate() {
+        let xx = x + index as i32 * 43;
+        draw_rune(fb, rune, xx, y, 2, color);
+        fb.draw_line(xx - 3, y + 37, xx + 30, y + 37, DUST);
+    }
+}
+
 type Scene = (u8, u8, u8); // verb, agent, patient
 fn event_for_clip(i: usize) -> Scene {
     const EVENTS: [Scene; 6] = [
@@ -676,10 +687,31 @@ fn scene_for_option(i: usize) -> Scene {
 fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene, time: f32) {
     let (verb, agent, patient) = scene;
     fb.fill_rect(x, y, w as u32, h as u32, INK);
-    // Ruined arch fragments and distant horizontal depth planes.
-    fb.draw_line(x + 4, y + h - 9, x + w - 5, y + h - 9, EDGE);
-    fb.draw_line(x + 4, y + 5, x + 4, y + h - 9, DUST);
-    fb.draw_line(x + w - 5, y + 5, x + w - 5, y + h - 9, DUST);
+    // Ruined vault and receding arches, without adding linguistic clues.
+    let back = Pixel::rgb(15, 29, 39);
+    fb.fill_rect(x + 5, y + 4, (w - 10) as u32, (h - 14) as u32, back);
+    let floor = y + h - 10;
+    fb.fill_rect(x + 5, floor, (w - 10) as u32, 6, STONE);
+    for column in 0..3 {
+        let cx = x + 10 + column * (w - 20) / 2;
+        fb.fill_rect(cx, y + 10, 3, (h - 21) as u32, Pixel::rgb(30, 43, 49));
+        fb.draw_line(cx - 5, y + 10, cx + 8, y + 10, EDGE);
+        fb.draw_line(cx - 5, floor - 2, cx + 8, floor - 2, DUST);
+    }
+    for layer in 0..3 {
+        let inset = 9 + layer * 4;
+        let tint = if layer == 0 { EDGE } else { DUST };
+        fb.draw_line(x + inset, y + inset, x + w / 2, y + 4, tint);
+        fb.draw_line(x + w / 2, y + 4, x + w - inset, y + inset, tint);
+    }
+    for step in 0..7 {
+        let xx = x + 14 + step * (w - 29) / 7;
+        fb.draw_line(xx, y + 18, xx + 4, y + 22, DUST);
+        fb.draw(xx + ((time * 2.0) as i32 % 3), y + 27, GOLD);
+    }
+    fb.draw_line(x + 5, floor, x + w - 6, floor, EDGE);
+    fb.draw_line(x + 5, y + 4, x + 5, floor, DUST);
+    fb.draw_line(x + w - 6, y + 4, x + w - 6, floor, DUST);
     let unit = if h >= 110 { 2 } else { 1 };
     let base = y + h - 17;
     let ax = x + w / 3;
