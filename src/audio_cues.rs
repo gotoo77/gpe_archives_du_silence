@@ -1,6 +1,6 @@
 //! Procedural sound design for the initial archaeological beta. No external assets.
 use gotoo_pixel_engine::{
-    Audio, AudioBus, AudioError, NoopAudio, PlaybackId, SoundBank, SoundId, pcm16_mono_wav,
+    Audio, AudioBus, AudioError, PlaybackId, SoundBank, SoundId, pcm16_mono_wav,
 };
 use std::f32::consts::TAU;
 
@@ -22,7 +22,7 @@ pub enum Cue {
 pub struct AudioCues {
     bank: SoundBank,
     initialized: bool,
-    loop_playback: Option<PlaybackId>,
+    _loop_playback: Option<PlaybackId>,
     failed: bool,
 }
 
@@ -37,7 +37,7 @@ impl AudioCues {
         Ok(Self {
             bank,
             initialized: false,
-            loop_playback: None,
+            _loop_playback: None,
             failed: false,
         })
     }
@@ -48,7 +48,7 @@ impl AudioCues {
         }
         self.initialized = true;
         match self.bank.start_loop_on_bus(audio, AMBIENCE, AudioBus::Music) {
-            Ok(playback) => self.loop_playback = Some(playback),
+            Ok(playback) => self._loop_playback = Some(playback),
             Err(_) => self.failed = true,
         }
     }
@@ -111,6 +111,7 @@ fn make_drone() -> Result<Vec<u8>, AudioError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gotoo_pixel_engine::NoopAudio;
 
     #[test]
     fn procedural_audio_wavs_are_valid_for_gpe() {
