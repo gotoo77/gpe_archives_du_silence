@@ -3,7 +3,9 @@ mod audio_cues;
 
 use archives_du_silence::{Console, Reaction, World};
 use audio_cues::{AudioCues, Cue};
-use gotoo_pixel_engine::{EngineConfig, Frame, Framebuffer, Game, GameResult, Key, MouseButton, Pixel, run};
+use gotoo_pixel_engine::{
+    EngineConfig, Frame, Framebuffer, Game, GameResult, Key, MouseButton, Pixel, run,
+};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
@@ -145,7 +147,10 @@ impl FirstRoom {
     }
 
     fn submit(&mut self, audio: &mut dyn gotoo_pixel_engine::Audio) {
-        match self.world.submit(self.console, self.symbols[console_index(self.console)]) {
+        match self
+            .world
+            .submit(self.console, self.symbols[console_index(self.console)])
+        {
             Reaction::Changed => {
                 self.message = "QUELQUE CHOSE A CHANGE.";
                 let cue = if self.world.second_active() {
@@ -231,8 +236,16 @@ impl FirstRoom {
         draw_door(fb, self.world.second_active());
 
         // Wires make the local target of each console unambiguous.
-        let first_wire = if self.console == Console::First { ACCENT } else { METAL };
-        let second_wire = if self.console == Console::Second { ACCENT } else { METAL };
+        let first_wire = if self.console == Console::First {
+            ACCENT
+        } else {
+            METAL
+        };
+        let second_wire = if self.console == Console::Second {
+            ACCENT
+        } else {
+            METAL
+        };
         fb.draw_line(355, 235, 355, 250, first_wire);
         fb.draw_line(355, 250, 377, 250, first_wire);
         fb.draw_line(533, 242, 533, 251, second_wire);
@@ -253,11 +266,20 @@ impl FirstRoom {
         }
 
         draw_console_marker(
-            fb, CONSOLE_ONE, 1, self.console == Console::First, true, self.elapsed,
+            fb,
+            CONSOLE_ONE,
+            1,
+            self.console == Console::First,
+            true,
+            self.elapsed,
         );
         draw_console_marker(
-            fb, CONSOLE_TWO, 2, self.console == Console::Second,
-            self.world.accessible(Console::Second), self.elapsed,
+            fb,
+            CONSOLE_TWO,
+            2,
+            self.console == Console::Second,
+            self.world.accessible(Console::Second),
+            self.elapsed,
         );
         let (x, y, width, height) = match self.console {
             Console::First => (296, 142, 123, 99),
@@ -285,7 +307,11 @@ impl FirstRoom {
         fb.draw_text_scaled(
             35,
             329,
-            if self.console == Console::First { "01" } else { "02" },
+            if self.console == Console::First {
+                "01"
+            } else {
+                "02"
+            },
             2,
             ACCENT,
         );
@@ -343,23 +369,26 @@ fn draw_console_marker(
     };
     fb.fill_rect(x, y, 43, 26, DARK);
     fb.draw_rect(x, y, 43, 26, outline);
-    fb.draw_text_scaled(x + 8, y + 5, if number == 1 { "1" } else { "2" }, 2, outline);
+    fb.draw_text_scaled(
+        x + 8,
+        y + 5,
+        if number == 1 { "1" } else { "2" },
+        2,
+        outline,
+    );
     fb.draw_line(x + 26, y + 9, x + 35, y + 9, outline);
     fb.draw_line(x + 26, y + 15, x + 35, y + 15, outline);
     if selected {
-        let pulse = if (elapsed * 3.0) as i32 % 2 == 0 { ACCENT } else { TEXT };
+        let pulse = if (elapsed * 3.0) as i32 % 2 == 0 {
+            ACCENT
+        } else {
+            TEXT
+        };
         fb.draw_rect(x - 3, y - 3, 49, 32, pulse);
     }
 }
 
-fn draw_focus_corners(
-    fb: &mut Framebuffer,
-    x: i32,
-    y: i32,
-    width: u32,
-    height: u32,
-    color: Pixel,
-) {
+fn draw_focus_corners(fb: &mut Framebuffer, x: i32, y: i32, width: u32, height: u32, color: Pixel) {
     let width = width as i32;
     let height = height as i32;
     for &(cx, cy, sx, sy) in &[
