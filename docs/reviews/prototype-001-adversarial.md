@@ -1,97 +1,103 @@
-# Adversarial review à blanc - Prototype 001 « Le Signal muet »
+# Revue adversariale à blanc v0.2 - Le Signal muet
 
-> **Statut : simulation de revue critique, 2026-11-19.** Aucun joueur n'a encore testé l'énigme ; aucun code n'a été audité.
+> **Nature** : simulation critique sur documents, le 19 novembre 2026. **Pas un playtest, pas un audit du moteur GPE.**
 >
-> Document associé : [spécification du prototype](../prototypes/001-le-signal-muet.md).
-
-## Question directrice
-
-**Peut-on distinguer la compréhension d'une règle de la simple découverte d'une combinaison de boutons ?**
-
-Le concept est prometteur si les actions changent le monde en vertu d'une **hypothèse que le joueur formule**. Une porte qui s'ouvre après un mot de passe n'est pas une preuve de compréhension.
-
-## Objections critiques, par priorité
-
-### P0 - Brute force
-
-**Attaque :** avec seulement cinq glyphes et deux positions, il est facile de tester les paires ; un joueur peut terminer sans comprendre.
-
-**Impact :** invalide notre principal argument différenciant.
-
-**Réponse minimale :** ne pas augmenter artificiellement le nombre de glyphes ni imposer un verrou temporel. Observer les choix dans un playtest, puis interroger le joueur sur ses prédictions et lui proposer un problème de transfert indépendant. Si le brute force domine, réviser les indices et la présentation des dispositifs. Une solution durable pourrait introduire une conséquence observable des hypothèses, mais **pas dans cette première implémentation**.
-
-**Test falsifiable :** un testeur résout les deux actions mais ne peut pas expliquer les rôles des glyphes : score de compréhension = échec.
-
-### P0 - Ambiguïté des inscriptions
-
-**Attaque :** une inscription à côté d'une lampe allumée peut vouloir dire « lumière », « alimenter », « lampe », « dangereux » ou être un nom propre ; le joueur n'a aucune raison de supposer un langage de commandes.
-
-**Réponse minimale :** utiliser un design cohérent de **bandes de commandes enregistrées** sur tous les appareils ; présenter les lampes comme identiques excepté leur état ; faire réagir visuellement les dispositifs. Les inférences doivent reposer sur des contrastes, pas sur une traduction arbitraire.
-
-**Test falsifiable :** trois testeurs sur six ou plus interprètent les panneaux comme de simples étiquettes décoratives : revoir la mise en scène des preuves.
-
-### P0 - Causalité artificielle
-
-**Attaque :** pourquoi faut-il arrêter la pompe avant d'atteindre la porte ?
-
-**Réponse minimale :** montrer le rideau de vapeur issu de la pompe qui masque effectivement le pupitre de la porte, puis sa dissipation quand la pompe s'arrête. Pas de règle « porte verrouillée tant que pompe active » invisible.
-
-**Test falsifiable :** après l'action sur la pompe, le joueur ne peut pas verbaliser ce qui a changé dans la salle : feedback à revoir.
-
-### P1 - Trop proche de Chants of Sennaar / Heaven's Vault
-
-**Attaque :** les glyphes, les inscriptions et l'archéologie ont déjà été explorés avec talent.
-
-**Réponse :** le critère de différence n'est pas le thème, mais le **transfert fonctionnel** : la règle linguistique devient un outil qui modifie les objets. Cela reste une hypothèse d'identité, pas une innovation garantie.
-
-**Test :** demander ce que le joueur retient : « j'ai déchiffré une phrase » ou « j'ai compris comment ces machines fonctionnent ».
-
-### P1 - Manque de richesse à moyen terme
-
-**Attaque :** une grammaire binaire `activer/désactiver` s'épuise vite.
-
-**Réponse :** accepter ce risque. Une première slice doit prouver un *moment de découverte*, pas la durée de vie d'un jeu complet. Différer la combinatoire grammaticale, les polysémies, les contradictions culturelles et l'émergence narrative jusqu'à validation.
-
-### P1 - Accessibilité / ergonomie
-
-**Attaque :** à faible résolution, les glyphes sont illisibles ; à la manette, les sélections sont lentes ; les informations uniquement sonores ou colorimétriques excluent certains joueurs.
-
-**Réponse :** préflight GPE + glyphes à silhouettes fortement distinctes + variations de mouvement et de forme ; test sans son ; contrôle des paires au clavier/manette avant toute DA élaborée.
-
-### P1 - Connaissance vs progression scriptée
-
-**Attaque :** la machine « valide » seulement une paire autorisée : l'illusion de compréhension cache un puzzle linéaire très classique.
-
-**Réponse :** pour le MVP, l'implémentation peut rester scriptée, mais le comportement doit être **cohérent avec les exemples observés**. Ne pas promettre un moteur de langue génératif ou une simulation systémique tant que non implémentés.
-
-## Trois pistes pour sublimer le concept, mais PAS pour le MVP
-
-1. **Hypothèses persistantes** : un carnet où le joueur note ses traductions, sans validation automatique.
-2. **Sémantique contextuelle** : un même verbe se manifeste différemment selon l'objet (éveiller une lumière, éveiller une machine, éveiller une mémoire).
-3. **Archéologie des erreurs** : une traduction raisonnable, mais incomplète, fonctionne dans un premier contexte et se révèle trompeuse dans un autre.
-
-Ces pistes sont **PROPOSÉES**, non arbitrées comme fonctionnalités.
-
-## Décisions de scope
-
-| Décision | Contenu |
-| --- | --- |
-| **GELER** | Découverte par déduction, connaissances transférables, une salle et cinq glyphes |
-| **PROTOTYPER** | Deux prédictions (`B D`, `A E`), preuves visuelles, mini-playtest |
-| **DIFFÉRER** | Carnet, langage complet, récits à embranchements, génération, réseau, score |
-| **HARD STOP** | Pas d'intégration GPE sans inspection de ses capacités réelles |
-
-## Critères de sortie de la phase 0
-
-- [ ] Vérifier la logique des quatre observations et deux solutions avec au moins un testeur naïf.
-- [ ] Observer les tentatives au hasard et noter les explications données.
-- [ ] S'assurer que l'état des dispositifs est intelligible sans son ni couleur.
-- [ ] Réviser la spécification quand une ambiguïté est objectivement observée.
-- [ ] Documenter le résultat des six premiers tests (ou justifier explicitement tout écart).
-- [ ] Effectuer ensuite le préflight GPE avant de créer du code.
+> **Périmètre** : [spécification v0.2](../prototypes/001-le-signal-muet.md), [fiche joueur](../playtests/001-fiche-joueur.md). Les points P0 de la v0.1 ont déclenché une correction documentaire ciblée, **sans nouveau gameplay**.
 
 ## Verdict
 
-**GO WITH CONDITIONS** pour tester une énigme dessinée sur papier.
+- **GO WITH CONDITIONS** pour une expérience papier de déduction.
+- **HARD STOP** sur une implémentation GPE tant que l'énigme n'a pas été testée et le moteur inspecté.
+- **Incertitude majeure** : cette micro-grammaire peut être cohérente mais trop triviale pour provoquer le déclic recherché.
 
-**NO-GO temporaire** pour promettre qu'une implémentation complète ou une « vraie langue » est déjà justifiée. Le différenciateur reste à prouver expérimentalement.
+## Failles détectées
+
+### P0-1. Portée des pupitres : contournement du puzzle (corrigée sur papier)
+
+**Attaque** : en v0.1, rien n'empêchait d'émettre `A E` depuis la pompe et d'ouvrir la porte à distance. L'ordre « pompe puis porte » était imposé sans justification système.
+
+**Correction v0.2** : pupitre physiquement connecté à un seul dispositif ; le deuxième glyphe désigne le type d'appareil local. Commande de cible différente : aucun effet ; l'accès au pupitre de porte est bloqué par la vapeur.
+
+**À vérifier** : en jeu, ce raccordement doit être visible sans un texte d'explication. Sinon la correction est théorique, pas perceptible.
+
+### P0-2. Fiche joueur trop directive (corrigée sur papier)
+
+**Attaque** : l'ancienne fiche disait « dernière commande enregistrée », puis détaillait « arrêter la pompe » et « ouvrir la porte ». Le test donnait le modèle syntaxique et la séquence d'actions à inférer.
+
+**Correction v0.2** : la fiche décrit des bandeaux à deux glyphes et un dispositif de saisie ; le seul but explicite est de sortir de la salle. Aucun mot « commande », « activer » ou « désactiver » dans les observations.
+
+**À vérifier** : un testeur est-il capable d'identifier la fonction des bandeaux sans un exposé verbal du modérateur ?
+
+### P0-3. Validation de la compréhension par simple réussite (contrôle ajouté)
+
+**Attaque** : 5 symboles, 2 emplacements, donc jusqu'à 25 paires possibles si répétitions autorisées. La chance ou le brute force peuvent ouvrir la porte sans compréhension.
+
+**Mitigation** : noter les tentatives, demander une justification et tester après coup la prédiction `A D` sur une pompe arrêtée ; ne jamais inférer H2 de la seule porte ouverte. Aucun verrou, minuterie punitive ou pénalité d'essai.
+
+**Risque résiduel** : un joueur peut construire une explication a posteriori. Un playtest papier ne prouve pas une cognition interne ; on cherche des indices convergents (phrases spontanées, faibles essais, transfert).
+
+### P1-1. C'est un tableau de vérité, pas encore une langue
+
+**Attaque** : deux verbes binaires + trois appareils ressemblent davantage à un protocole d'automate qu'à l'interprétation d'une langue ancienne. L'exploration, la culture et l'archéologie restent surtout dans l'habillage.
+
+**Réponse** : ne pas nier le problème. **Ce prototype mesure uniquement l'émergence d'une déduction appliquée au monde.** Il ne valide pas l'ambition narrative ou linguistique. Pour les phases suivantes, tester un sens transférable à des contextes différents, sans planifier déjà un moteur grammatical.
+
+### P1-2. Puzzle trop facile pour sa promesse de durée
+
+**Attaque** : les deux lampes côte à côte offrent une différence directe ; la pompe et la porte rendent la permutation presque évidente. Une résolution en 30-60 secondes n'est pas forcément gratifiante.
+
+**Réponse** : conserver le puzzle simple pour obtenir une base mesurable, noter le temps et le plaisir rapporté ; ne pas ajouter de glyphes, de fausses pistes ou de pénalités pour remplir artificiellement dix minutes.
+
+**Signal de REVISE** : les joueurs comprennent rapidement mais disent qu'ils ont suivi une recette sans découverte.
+
+### P1-3. Indices compatibles avec d'autres interprétations
+
+**Attaque** : les bandeaux pourraient être des noms, des descriptions d'états ou un historique. Les indices n'imposent pas logiquement le sens « impératif de commande ».
+
+**Réponse** : le jeu n'a pas à imposer une traduction linguistique unique, mais **la règle d'action doit être vérifiable** par le feedback. La bande des pupitres doit ressembler aux bandeaux des objets ; un test naïf dira si l'association est intelligible. Ne pas corriger l'ambiguïté en expliquant tout au joueur.
+
+### P1-4. Incohérences d'interaction
+
+**Attaque** : si le pupitre de la pompe accepte `A D` alors qu'elle tourne déjà, quel retour produit-il ? Si un glyphe pour la porte est tenté sur la pompe, le joueur reçoit-il un indice qui révèle la grammaire ?
+
+**Réponse** : définir les effets par état du dispositif : commande locale cohérente = état souhaité ; commande incohérente = aucun effet. Retours neutres, sans réponse « c'était l'objet qui était faux ».
+
+### P1-5. Accessibilité et lisibilité
+
+**Attaque** : dans une très petite résolution, `△`, `◇`, `□` peuvent devenir difficiles à différencier ; la vapeur peut masquer le dispositif au lieu de montrer l'obstacle.
+
+**Réponse** : les glyphes géométriques sont uniquement des placeholders papier. Tester des silhouettes distinctes, grandes et robustes ; retours visuels et audio redondants. Le préflight GPE reste à faire.
+
+## Attaques à tenter durant le test papier
+
+1. Émettre `A E` sur le pupitre de la pompe : **la porte ne s'ouvre pas**.
+2. Émettre `B C` sur le pupitre de la pompe : **aucun effet**, aucune révélation de grammaire.
+3. Émettre `A D` alors que la pompe est déjà en marche : **aucun changement d'état**.
+4. Sauter directement au pupitre de porte : **inaccessible**, obstacle physique visible.
+5. Résoudre uniquement par essais : **porte ouverte ne vaut pas compréhension**.
+6. Proposer l'interprétation « A/B sont des états et non des verbes » : accepter si la **prédiction du fonctionnement** est correcte.
+7. Comprendre très vite sans plaisir : **REVISE**, ne pas déclarer GO en se fondant sur la réussite seule.
+
+## Idées intéressantes à différer
+
+- **Carnet d'hypothèses** : enregistrer les significations supposées sans confirmation automatique.
+- **Polysémie fonctionnelle** : un symbole comme « éveiller » s'applique à une lampe, une machine puis un souvenir.
+- **Archéologie des erreurs** : une hypothèse partiellement correcte devient insuffisante plus tard.
+- **Inscriptions culturelles** : symboles dans des documents, rituels et architectures, pas seulement dans des dispositifs.
+
+Aucune n'est un engagement d'implémentation.
+
+## Critères de sortie
+
+- [x] Portée locale des commandes définie dans le document.
+- [x] Fiche joueur rendue moins directive.
+- [x] Comportement des tentatives invalides défini.
+- [ ] Un testeur naïf comprend sans aide verbale.
+- [ ] Les joueurs peuvent expliquer et réappliquer la règle.
+- [ ] La majorité rapporte de la curiosité ou un déclic, au-delà du score.
+- [ ] Les glyphes sont lisibles et les états accessibles en contexte de rendu cible.
+- [ ] Préflight réel du dépôt GPE avant le moindre code.
+
+## Conclusion
+
+Le prototype v0.2 est un **bon test falsifiable**, pas encore un bon jeu démontré. Si la découverte ressemble à un exercice de logique scolaire, ne pas passer directement au Rust. Réviser le design d'expérience d'abord.
