@@ -134,7 +134,7 @@ fn inside(x: i32, y: i32, area: (i32, i32, i32, i32)) -> bool {
 impl FirstRoom {
     fn select_console(&mut self, desired: Console, audio: &mut dyn gotoo_pixel_engine::Audio) {
         if !self.world.accessible(desired) {
-            self.message = "CE PUPITRE EST INACCESSIBLE.";
+            self.message = "PUPITRE INACCESSIBLE.";
             self.sounds.play(audio, Cue::Reject);
             return;
         }
@@ -179,7 +179,11 @@ impl FirstRoom {
             .iter()
             .position(|x0| inside(x, y, (*x0, SLOT_Y, 42, 36)))
         {
-            self.slot = index;
+            if self.slot == index {
+                adjust_draft(&mut self.symbols, self.console, index, true);
+            } else {
+                self.slot = index;
+            }
             self.sounds.play(audio, Cue::Tick);
         } else if inside(x, y, (SEND_X, SEND_Y, 95, 32)) {
             self.submit(audio);
@@ -317,7 +321,7 @@ impl FirstRoom {
         fb.draw_text_scaled(153, 134, "HAUT / BAS : SYMBOLE", 1, TEXT);
         fb.draw_text_scaled(153, 151, "ENTREE : ESSAYER", 1, TEXT);
         fb.draw_text_scaled(153, 168, "TAB : AUTRE PUPITRE", 1, TEXT);
-        fb.draw_text_scaled(153, 185, "CLIC : PUPITRE / CASE / ENVOYER", 1, MUTED);
+        fb.draw_text_scaled(153, 185, "CLIC : PUPITRE / GLYPHE / ENVOYER", 1, MUTED);
         fb.draw_text(153, 202, "R: RESET   H: FERMER   ESC: QUITTER", MUTED);
     }
 }
@@ -504,6 +508,20 @@ mod tests {
         assert!(inside(504, 250, (CONSOLE_TWO.0, CONSOLE_TWO.1, 43, 26)));
         assert!(inside(527, 333, (SEND_X, SEND_Y, 95, 32)));
         assert!(!inside(470, 333, (SEND_X, SEND_Y, 95, 32)));
+    }
+
+    #[test]
+    fn switching_console_is_rejected_until_accessible() {
+        use gotoo_pixel_engine::NoopAudio;
+
+        let mut room = FirstRoom::new().expect("procedural audio should generate");
+        let mut audio = NoopAudio::default();
+        room.select_console(Console::Second, &mut audio);
+        assert_eq!(room.console, Console::First);
+
+        room.world.submit(Console::First, [1, 3]);
+        room.select_console(Console::Second, &mut audio);
+        assert_eq!(room.console, Console::Second);
     }
 
     #[test]
