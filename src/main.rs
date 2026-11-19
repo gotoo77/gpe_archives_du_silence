@@ -574,4 +574,3 @@ mod tests {
         assert!(world.accessible(Console::First));
     }
 }
-
