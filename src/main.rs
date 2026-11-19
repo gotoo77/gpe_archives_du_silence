@@ -777,6 +777,107 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     }
 }
 
+// Two original 17-pixel-wide costume silhouettes, not interchangeable stick figures.
+const WATCHER_SILHOUETTE: [&str; 27] = [
+    ".......g.g.......",
+    "......gbbg......",
+    ".....ggbbgg.....",
+    "......bbbb......",
+    ".....bffffb.....",
+    ".....bffffb.....",
+    "......bffb......",
+    ".....bggggb.....",
+    "...bbcccccbb..",
+    "...bcccccccccbs.",
+    "..sbclcccclccbss",
+    "...sclcccclccbs.",
+    "...scclcccclccbs",
+    "....blcccccccb..",
+    "....bclgglcccb..",
+    ".....bclllccb...",
+    "....bbclllccbb..",
+    "....bcllllcclb..",
+    "...bbcllllcclbb.",
+    "...bclllclllcbb.",
+    "...bblllllllcbb.",
+    ".....bllbbllb...",
+    ".....bllbbllb...",
+    "....bbb..bbb....",
+    "....bgg..ggb....",
+    "...bbb....bbb...",
+    "..bbbb....bbbb..",
+];
+const SCRIBE_SILHOUETTE: [&str; 25] = [
+    ".......gg........",
+    "......gbbg......",
+    ".....gbbbbg.....",
+    "....gbbbbbbg....",
+    "....bbffffbb....",
+    "....bbffffbb....",
+    ".....bbffbb.....",
+    ".....bggggb.....",
+    "....bbccccbb....",
+    "...bbccccccbb...",
+    "..bbclccccclbb..",
+    "..blclcccclclb..",
+    "..bllcllcllclb..",
+    "..bbcllcllccbb..",
+    "...bcllcllccb...",
+    "...bcllclllcb...",
+    "...bclllllccb...",
+    "...bclllllccb...",
+    "...bclllllccb...",
+    "..bbcllccclcbb..",
+    "..bcllcccccclb..",
+    "..bbbbbbbbbbbb..",
+    "....bll..llb....",
+    "...bbb....bbb...",
+    "..bbbb....bbbb..",
+];
+
+fn draw_costume(
+    fb: &mut Framebuffer,
+    x: i32,
+    ground: i32,
+    scale: i32,
+    rows: &[&str],
+    tone: Pixel,
+    faded: bool,
+) {
+    let top = ground - rows.len() as i32 * scale;
+    for (row_idx, row) in rows.iter().enumerate() {
+        let bytes = row.as_bytes();
+        let mut start = 0;
+        while start < bytes.len() {
+            let symbol = bytes[start];
+            let mut end = start + 1;
+            while end < bytes.len() && bytes[end] == symbol {
+                end += 1;
+            }
+            let pixel = match symbol {
+                b'b' => Some(INK),
+                b'c' => Some(if faded { DUST } else { Pixel::rgb(58, 78, 78) }),
+                b'l' => Some(if faded { RUST } else { Pixel::rgb(129, 149, 135) }),
+                b'f' => Some(if faded { RUST } else { tone }),
+                b'g' => Some(if faded { EDGE } else { GOLD }),
+                b'w' => Some(if faded { EDGE } else { IVORY }),
+                b's' => Some(DUST),
+                _ => None,
+            };
+            if let Some(color) = pixel {
+                fb.fill_rect(
+                    x + (start as i32 - 8) * scale,
+                    top + row_idx as i32 * scale,
+                    ((end - start) as i32 * scale) as u32,
+                    scale as u32,
+                    color,
+                );
+            }
+            start = end;
+        }
+    }
+}
+
 fn draw_entity(
     fb: &mut Framebuffer,
     x: i32,
@@ -786,121 +887,30 @@ fn draw_entity(
     color: Pixel,
     faded: bool,
 ) {
-    let color = if faded { RUST } else { color };
     match kind {
         3 => {
-            // Tall watcher with staff, mantle, and a two-pronged crown.
-            fb.fill_circle(x, y - 30 * scale, (5 * scale) as u32, color);
-            fb.draw_line(
-                x - 10 * scale,
-                y - 38 * scale,
-                x - 7 * scale,
-                y - 34 * scale,
-                GOLD,
-            );
-            fb.draw_line(
-                x + 10 * scale,
-                y - 38 * scale,
-                x + 7 * scale,
-                y - 34 * scale,
-                GOLD,
-            );
-            fb.fill_rect(
-                x - 5 * scale,
-                y - 23 * scale,
-                (10 * scale) as u32,
-                (18 * scale) as u32,
-                color,
-            );
-            fb.draw_line(
-                x - 10 * scale,
-                y - 20 * scale,
-                x - 13 * scale,
-                y - 7 * scale,
-                color,
-            );
-            fb.draw_line(
-                x + 10 * scale,
-                y - 20 * scale,
-                x + 9 * scale,
-                y - 7 * scale,
-                color,
-            );
-            fb.draw_line(x - 2 * scale, y - 6 * scale, x - 7 * scale, y, color);
-            fb.draw_line(x + 2 * scale, y - 6 * scale, x + 6 * scale, y, color);
-            fb.draw_line(
-                x + 13 * scale,
-                y - 28 * scale,
-                x + 13 * scale,
-                y + scale,
-                GOLD,
-            );
+            draw_costume(fb, x, y, scale, &WATCHER_SILHOUETTE, color, faded);
+            // Ritual staff belongs only to this figure, even at thumbnail scale.
+            fb.fill_rect(x + 12 * scale, y - 28 * scale, (2 * scale) as u32, (28 * scale) as u32, RUST);
+            fb.draw_line(x + 13 * scale, y - 29 * scale, x + 13 * scale, y - 34 * scale, GOLD);
+            fb.draw_line(x + 10 * scale, y - 31 * scale, x + 16 * scale, y - 31 * scale, GOLD);
         }
         4 => {
-            // Distinct short, hooded silhouette, open palm.
-            fb.fill_circle(x, y - 19 * scale, (5 * scale) as u32, color);
-            fb.draw_line(x - 5 * scale, y - 21 * scale, x, y - 29 * scale, GOLD);
-            fb.draw_line(x, y - 29 * scale, x + 7 * scale, y - 20 * scale, GOLD);
-            fb.fill_rect(
-                x - 4 * scale,
-                y - 13 * scale,
-                (8 * scale) as u32,
-                (12 * scale) as u32,
-                color,
-            );
-            fb.draw_line(
-                x - 4 * scale,
-                y - 11 * scale,
-                x - 12 * scale,
-                y - 5 * scale,
-                color,
-            );
-            fb.draw_line(
-                x + 4 * scale,
-                y - 11 * scale,
-                x + 11 * scale,
-                y - 9 * scale,
-                color,
-            );
-            fb.draw_line(
-                x - 3 * scale,
-                y - scale,
-                x - 7 * scale,
-                y + 3 * scale,
-                color,
-            );
-            fb.draw_line(
-                x + 3 * scale,
-                y - scale,
-                x + 7 * scale,
-                y + 3 * scale,
-                color,
-            );
+            draw_costume(fb, x, y, scale, &SCRIBE_SILHOUETTE, color, faded);
+            // A short diagonal sash distinguishes the scribe from the crowned watcher.
+            fb.draw_line(x - 5 * scale, y - 14 * scale, x + 3 * scale, y - 9 * scale, GOLD);
         }
         _ => {
-            // Ember on its independent pedestal.
-            fb.fill_rect(
-                x - 11 * scale,
-                y - 6 * scale,
-                (22 * scale) as u32,
-                (7 * scale) as u32,
-                STONE,
-            );
-            fb.draw_line(
-                x - 13 * scale,
-                y - 6 * scale,
-                x + 13 * scale,
-                y - 6 * scale,
-                GOLD,
-            );
-            fb.fill_circle(
-                x,
-                y - 21 * scale,
-                (7 * scale) as u32,
-                if faded { RUST } else { BLAZE },
-            );
-            fb.draw_circle(x, y - 21 * scale, (11 * scale) as u32, GOLD);
-            fb.draw_line(x, y - 37 * scale, x + 3 * scale, y - 29 * scale, BLAZE);
+            // The third referent is a suspended ember, not a humanoid.
+            let orb = if faded { RUST } else { BLAZE };
+            fb.fill_rect(x - 13 * scale, y - 4 * scale, (26 * scale) as u32, (5 * scale) as u32, INK);
+            fb.fill_rect(x - 10 * scale, y - 6 * scale, (20 * scale) as u32, (4 * scale) as u32, STONE);
+            fb.draw_line(x - 13 * scale, y - 7 * scale, x + 13 * scale, y - 7 * scale, GOLD);
+            fb.fill_circle(x, y - 20 * scale, (9 * scale) as u32, orb);
+            fb.draw_circle(x, y - 20 * scale, (13 * scale) as u32, RUST);
+            fb.draw_circle(x, y - 20 * scale, (11 * scale) as u32, GOLD);
+            fb.fill_rect(x - 3 * scale, y - 26 * scale, (4 * scale) as u32, (3 * scale) as u32, IVORY);
+            fb.draw_line(x + 2 * scale, y - 35 * scale, x + 6 * scale, y - 29 * scale, GOLD);
         }
     }
 }
