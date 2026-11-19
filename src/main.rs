@@ -3,9 +3,7 @@ mod audio_cues;
 
 use archives_du_silence::{Console, Reaction, World};
 use audio_cues::{AudioCues, Cue};
-use gotoo_pixel_engine::{
-    EngineConfig, Frame, Framebuffer, Game, GameResult, Key, Pixel, run,
-};
+use gotoo_pixel_engine::{EngineConfig, Frame, Framebuffer, Game, GameResult, Key, Pixel, run};
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
