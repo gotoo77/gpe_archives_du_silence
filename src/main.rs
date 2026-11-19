@@ -730,15 +730,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
             base - 16 * unit,
             SPIRIT,
         );
-        draw_entity(
-            fb,
-            px + movement,
-            base - lift,
-            patient,
-            unit,
-            IVORY,
-            false,
-        );
+        draw_entity(fb, px + movement, base - lift, patient, unit, IVORY, false);
         fb.draw_line(
             px - 12 * unit,
             base - 5 * unit,
