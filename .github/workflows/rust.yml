@@ -7,10 +7,15 @@ on:
 
 jobs:
   native:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - name: Install native GPE prerequisites
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y libudev-dev libasound2-dev libxkbcommon-dev pkg-config
@@ -18,8 +23,9 @@ jobs:
         with:
           toolchain: "1.97.1"
           components: rustfmt, clippy
-      - name: Resolve provisional dependency lock
-        run: cargo generate-lockfile
+      - name: Require committed Cargo.lock
+        shell: bash
+        run: test -s Cargo.lock
       - name: Formatting all Rust sources
         run: cargo fmt --all -- --check
       - name: Compile all targets

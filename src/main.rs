@@ -1,7 +1,8 @@
-//! Spoiler-safe native presentation for the first playable room.
+//! SPOILERS FOR THE BLIND TESTER: in-world staging for the memory archive.
+//! The player-facing README contains no rune dictionary or puzzle solution.
 mod audio_cues;
 
-use archives_du_silence::{Console, Reaction, World};
+use archives_du_silence::{Archive, CLUES, EMPTY_RUNE, Page, RUNE_COUNT, Verdict};
 use audio_cues::{AudioCues, Cue};
 use gotoo_pixel_engine::{
     EngineConfig, Frame, Framebuffer, Game, GameResult, Key, MouseButton, Pixel, run,
@@ -9,515 +10,942 @@ use gotoo_pixel_engine::{
 
 const WIDTH: u32 = 640;
 const HEIGHT: u32 = 360;
-const BG: Pixel = Pixel::rgb(7, 13, 22);
-const WALL: Pixel = Pixel::rgb(15, 26, 40);
-const STONE: Pixel = Pixel::rgb(33, 49, 65);
-const METAL: Pixel = Pixel::rgb(76, 111, 126);
-const TEXT: Pixel = Pixel::rgb(218, 236, 230);
-const MUTED: Pixel = Pixel::rgb(131, 160, 166);
-const LIGHT: Pixel = Pixel::rgb(253, 213, 121);
-const ACCENT: Pixel = Pixel::rgb(100, 225, 210);
-const DARK: Pixel = Pixel::rgb(6, 17, 29);
-const STEAM: Pixel = Pixel::rgb(93, 123, 129);
-const CONSOLE_ONE: (i32, i32) = (377, 239);
-const CONSOLE_TWO: (i32, i32) = (489, 239);
-const SLOT_X: [i32; 2] = [240, 290];
-const SLOT_Y: i32 = 316;
-const SEND_X: i32 = 510;
-const SEND_Y: i32 = 319;
+const INK: Pixel = Pixel::rgb(8, 15, 24);
+const DEEP: Pixel = Pixel::rgb(15, 26, 37);
+const STONE: Pixel = Pixel::rgb(33, 44, 52);
+const EDGE: Pixel = Pixel::rgb(91, 103, 98);
+const DUST: Pixel = Pixel::rgb(62, 70, 70);
+const IVORY: Pixel = Pixel::rgb(222, 213, 181);
+const GOLD: Pixel = Pixel::rgb(200, 157, 96);
+const RUST: Pixel = Pixel::rgb(143, 95, 65);
+const SPIRIT: Pixel = Pixel::rgb(113, 207, 184);
+const DIM: Pixel = Pixel::rgb(131, 143, 136);
+const BLAZE: Pixel = Pixel::rgb(248, 163, 82);
+const ERROR: Pixel = Pixel::rgb(212, 126, 117);
 
-struct FirstRoom {
-    world: World,
-    console: Console,
-    symbols: [[usize; 2]; 2],
-    slot: usize,
-    message: &'static str,
+const CARD_W: i32 = 128;
+const CARD_H: i32 = 98;
+const CARD_X: [i32; 3] = [27, 166, 305];
+const CARD_Y: [i32; 2] = [80, 191];
+
+struct MemoryGame {
+    archive: Archive,
+    sounds: AudioCues,
     elapsed: f32,
     help: bool,
-    sounds: AudioCues,
+    message: &'static str,
+    testimony_focus: usize,
+    draft_rune: u8,
 }
 
-impl FirstRoom {
+impl MemoryGame {
     fn new() -> Result<Self, gotoo_pixel_engine::AudioError> {
         Ok(Self {
-            world: World::default(),
-            console: Console::First,
-            symbols: [[0, 0], [0, 0]],
-            slot: 0,
-            message: "OBSERVEZ LES LIEUX.",
+            archive: Archive::default(),
+            sounds: AudioCues::new()?,
             elapsed: 0.0,
             help: false,
-            sounds: AudioCues::new()?,
+            message: "TOUCHEZ UNE ARCHIVE. RECONSTITUEZ SON HISTOIRE.",
+            testimony_focus: 0,
+            draft_rune: 0,
         })
     }
 
-    fn reset(&mut self) {
-        self.world = World::default();
-        self.console = Console::First;
-        self.symbols = [[0, 0], [0, 0]];
-        self.slot = 0;
-        self.message = "OBSERVEZ LES LIEUX.";
-        self.elapsed = 0.0;
-        self.help = false;
-    }
-}
-
-impl Game for FirstRoom {
-    fn update(&mut self, frame: &mut Frame<'_>) -> GameResult {
-        self.sounds.ensure_ambience(frame.audio);
-        if frame.input.key(Key::Escape).pressed() {
-            return GameResult::Exit;
+    fn activate_hall(&mut self, focus: usize, audio: &mut dyn gotoo_pixel_engine::Audio) {
+        match focus {
+            0..=5 => {
+                self.archive.open_clip(focus);
+                self.message = "UNE MEMOIRE SE REJOUE.";
+            }
+            6 => {
+                self.archive.open_witness();
+                self.testimony_focus = self.archive.witness_scene().unwrap_or(0);
+                self.message = "QUELLE SCENE RACONTE CE TEMOIGNAGE ?";
+            }
+            7 => {
+                self.archive.open_restore();
+                self.message = "RECONSTITUEZ LES TROIS SIGNES MANQUANTS.";
+            }
+            _ => return,
         }
-        if frame.input.key(Key::H).pressed() {
+        self.sounds.play(audio, Cue::Tick);
+    }
+
+    fn seal(&mut self, audio: &mut dyn gotoo_pixel_engine::Audio) {
+        match self.archive.commit() {
+            Verdict::MissingEvidence => {
+                self.message = "DEUX FRAGMENTS RESTENT A RECONSTRUIRE.";
+                self.sounds.play(audio, Cue::Reject);
+            }
+            Verdict::Discordant => {
+                self.message = "LES DEUX TRACES NE CONCORDENT PAS.";
+                self.sounds.play(audio, Cue::Reject);
+            }
+            Verdict::Recovered => {
+                self.message = "UNE MEMOIRE OUBLIEE REFAIT SURFACE.";
+                self.sounds.play(audio, Cue::Discovery);
+            }
+        }
+    }
+
+    fn pick_witness(&mut self, option: usize, audio: &mut dyn gotoo_pixel_engine::Audio) {
+        self.testimony_focus = option;
+        if self.archive.choose_witness_scene(option) {
+            self.message = "INTERPRETATION CONSERVEE. AUCUNE CONFIRMATION.";
+            self.archive.back();
+            self.archive.set_focus(6);
+            self.sounds.play(audio, Cue::Shift);
+        }
+    }
+
+    fn pick_rune(&mut self, rune: u8, audio: &mut dyn gotoo_pixel_engine::Audio) {
+        if self.archive.insert(rune) {
+            self.draft_rune = rune;
+            self.sounds.play(audio, Cue::Tick);
+        }
+    }
+
+    fn handle_click(&mut self, x: i32, y: i32, audio: &mut dyn gotoo_pixel_engine::Audio) {
+        if self.help {
+            self.help = false;
+            return;
+        }
+        match self.archive.page() {
+            Page::Hall => {
+                for index in 0..6 {
+                    let (cx, cy) = card_pos(index);
+                    if hit(x, y, cx, cy, CARD_W, CARD_H) {
+                        self.archive.set_focus(index);
+                        self.activate_hall(index, audio);
+                        return;
+                    }
+                }
+                if hit(x, y, 464, 229, 74, 35) {
+                    self.activate_hall(6, audio);
+                } else if hit(x, y, 542, 229, 74, 35) {
+                    self.activate_hall(7, audio);
+                } else if hit(x, y, 502, 289, 116, 30) {
+                    self.seal(audio);
+                }
+            }
+            Page::Clip(_) => {
+                if hit(x, y, 480, 272, 130, 37) {
+                    self.archive.back();
+                    self.sounds.play(audio, Cue::Tick);
+                }
+            }
+            Page::Witness => {
+                for option in 0..3 {
+                    if hit(x, y, 70, 127 + option as i32 * 61, 500, 55) {
+                        self.pick_witness(option, audio);
+                        return;
+                    }
+                }
+                if hit(x, y, 500, 298, 112, 30) {
+                    self.archive.back();
+                }
+            }
+            Page::Restore => {
+                for slot in 0..3 {
+                    if hit(x, y, 75 + slot as i32 * 65, 273, 55, 51) {
+                        self.archive.set_slot(slot);
+                        self.sounds.play(audio, Cue::Tick);
+                        return;
+                    }
+                }
+                for rune in 0..RUNE_COUNT {
+                    let rx = 438 + i32::from(rune % 3) * 58;
+                    let ry = 192 + i32::from(rune / 3) * 50;
+                    if hit(x, y, rx, ry, 50, 43) {
+                        self.pick_rune(rune, audio);
+                        return;
+                    }
+                }
+                if hit(x, y, 480, 285, 129, 37) {
+                    self.archive.back();
+                    self.sounds.play(audio, Cue::Tick);
+                }
+            }
+            Page::Recovered => {}
+        }
+    }
+
+    fn keyboard(&mut self, frame: &mut Frame<'_>) {
+        let key = |key| frame.input.key(key).pressed();
+        if key(Key::H) {
             self.help = !self.help;
             self.sounds.play(frame.audio, Cue::Tick);
         }
-        if frame.input.key(Key::R).pressed() {
-            self.reset();
+        if key(Key::R) {
+            self.archive = Archive::default();
+            self.message = "LES ARCHIVES RECOMMENCENT LEUR VEILLE.";
             self.sounds.play(frame.audio, Cue::Tick);
-        } else if !self.world.second_active() {
-            if frame.input.key(Key::Tab).pressed() {
-                self.select_console(other_console(self.console), frame.audio);
+            return;
+        }
+        if key(Key::Escape) {
+            self.help = false;
+            self.archive.back();
+            self.sounds.play(frame.audio, Cue::Tick);
+        }
+        if self.help {
+            return;
+        }
+        match self.archive.page() {
+            Page::Hall => {
+                if key(Key::Tab) || key(Key::Right) {
+                    self.archive.set_focus((self.archive.focus() + 1) % 8);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                } else if key(Key::Left) {
+                    self.archive.set_focus((self.archive.focus() + 7) % 8);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Enter) {
+                    self.activate_hall(self.archive.focus(), frame.audio);
+                }
+                if key(Key::S) {
+                    self.seal(frame.audio);
+                }
             }
-            if frame.input.key(Key::Left).pressed() {
-                self.slot = 0;
-                self.sounds.play(frame.audio, Cue::Tick);
+            Page::Clip(index) => {
+                if key(Key::Right) {
+                    self.archive.open_clip((index + 1) % 6);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                } else if key(Key::Left) {
+                    self.archive.open_clip((index + 5) % 6);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                } else if key(Key::Enter) || key(Key::Space) {
+                    self.archive.back();
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
             }
-            if frame.input.key(Key::Right).pressed() {
-                self.slot = 1;
-                self.sounds.play(frame.audio, Cue::Tick);
+            Page::Witness => {
+                if key(Key::Down) || key(Key::Right) {
+                    self.testimony_focus = (self.testimony_focus + 1) % 3;
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Up) || key(Key::Left) {
+                    self.testimony_focus = (self.testimony_focus + 2) % 3;
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Enter) || key(Key::Space) {
+                    self.pick_witness(self.testimony_focus, frame.audio);
+                }
             }
-            if frame.input.key(Key::Up).pressed() {
-                adjust_draft(&mut self.symbols, self.console, self.slot, true);
-                self.sounds.play(frame.audio, Cue::Tick);
+            Page::Restore => {
+                if key(Key::Left) {
+                    self.archive.set_slot((self.archive.slot() + 2) % 3);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Right) {
+                    self.archive.set_slot((self.archive.slot() + 1) % 3);
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Up) {
+                    self.draft_rune = (self.draft_rune + 1) % RUNE_COUNT;
+                    self.pick_rune(self.draft_rune, frame.audio);
+                }
+                if key(Key::Down) {
+                    self.draft_rune = (self.draft_rune + RUNE_COUNT - 1) % RUNE_COUNT;
+                    self.pick_rune(self.draft_rune, frame.audio);
+                }
+                if key(Key::Space) {
+                    self.archive.clear_slot();
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
+                if key(Key::Enter) {
+                    self.archive.back();
+                    self.sounds.play(frame.audio, Cue::Tick);
+                }
             }
-            if frame.input.key(Key::Down).pressed() {
-                adjust_draft(&mut self.symbols, self.console, self.slot, false);
-                self.sounds.play(frame.audio, Cue::Tick);
-            }
-            if frame.input.key(Key::Enter).pressed() {
-                self.submit(frame.audio);
-            }
-            if frame.input.mouse_button(MouseButton::Left).pressed()
-                && let Some((x, y)) = frame.input.mouse_position()
-            {
-                self.handle_click(x, y, frame.audio);
+            Page::Recovered => {}
+        }
+    }
+
+    fn draw(&self, fb: &mut Framebuffer) {
+        draw_room(fb, self.elapsed);
+        match self.archive.page() {
+            Page::Hall => self.draw_hall(fb),
+            Page::Clip(index) => self.draw_clip(fb, index),
+            Page::Witness => self.draw_witness(fb),
+            Page::Restore => self.draw_restore(fb),
+            Page::Recovered => self.draw_recovered(fb),
+        }
+        draw_footer(fb, self.message, self.archive.page());
+        if self.help {
+            self.draw_help(fb);
+        }
+        if self.sounds.unavailable() {
+            fb.draw_text(532, 15, "SON INDISPO", ERROR);
+        }
+    }
+
+    fn draw_hall(&self, fb: &mut Framebuffer) {
+        for (index, clue) in CLUES.iter().enumerate() {
+            let (x, y) = card_pos(index);
+            let focused = self.archive.focus() == index;
+            fb.fill_rect(x, y, CARD_W as u32, CARD_H as u32, DEEP);
+            fb.draw_rect(
+                x,
+                y,
+                CARD_W as u32,
+                CARD_H as u32,
+                if focused { GOLD } else { EDGE },
+            );
+            draw_scene(
+                fb,
+                x + 8,
+                y + 8,
+                112,
+                58,
+                event_for_clip(index),
+                self.elapsed,
+            );
+            fb.fill_rect(x + 5, y + 70, 117, 23, INK);
+            draw_sentence(fb, clue, x + 22, y + 73, 1, IVORY);
+            if self.archive.watched(index) {
+                fb.draw_text(x + 5, y + 5, "*", SPIRIT);
             }
         }
-        self.elapsed += frame.delta_time.as_secs_f32().min(0.10);
+        draw_monument(fb, 467, 87, self.elapsed, false);
+        draw_button(fb, 464, 229, 74, 35, "LIRE", self.archive.focus() == 6);
+        draw_button(fb, 542, 229, 74, 35, "ECRIRE", self.archive.focus() == 7);
+        fb.draw_text(475, 271, "MEMOIRE BRISEE", DIM);
+        fb.draw_text(469, 283, "DEUX TRACES", DIM);
+        draw_button(fb, 502, 289, 116, 30, "SCELLER [S]", false);
+    }
+
+    fn draw_clip(&self, fb: &mut Framebuffer, index: usize) {
+        draw_plaque(fb, 25, 73, 431, 233);
+        fb.draw_text(44, 89, "REMANENCE", GOLD);
+        fb.draw_text_scaled(41, 106, "ARCHIVE", 2, IVORY);
+        fb.draw_text_scaled(
+            173,
+            106,
+            match index {
+                0 => "01",
+                1 => "02",
+                2 => "03",
+                3 => "04",
+                4 => "05",
+                _ => "06",
+            },
+            2,
+            GOLD,
+        );
+        draw_scene(fb, 49, 143, 383, 135, event_for_clip(index), self.elapsed);
+        fb.draw_text(478, 90, "TRACE INSCRITE", DIM);
+        fb.draw_line(477, 105, 612, 105, EDGE);
+        draw_sentence(fb, &CLUES[index], 480, 124, 2, GOLD);
+        fb.draw_text(479, 208, "COMPARER LES", IVORY);
+        fb.draw_text(479, 221, "MEMOIRES.", IVORY);
+        fb.draw_text(479, 239, "< > : FRAGMENTS", DIM);
+        draw_button(fb, 480, 272, 130, 37, "RETOUR", false);
+    }
+
+    fn draw_witness(&self, fb: &mut Framebuffer) {
+        draw_plaque(fb, 23, 69, 595, 259);
+        fb.draw_text_scaled(42, 80, "LE TEMOIGNAGE", 2, IVORY);
+        fb.draw_text(42, 106, "QUEL EVENEMENT CE TEXTE DECRIT-IL ?", DIM);
+        draw_sentence(fb, &archives_du_silence::WITNESS, 457, 75, 1, GOLD);
+        for option in 0..3 {
+            let y = 127 + option as i32 * 61;
+            let active = self.testimony_focus == option;
+            fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
+            fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
+            fb.draw_text_scaled(
+                91,
+                y + 16,
+                match option {
+                    0 => "I",
+                    1 => "II",
+                    _ => "III",
+                },
+                2,
+                GOLD,
+            );
+            draw_scene(
+                fb,
+                155,
+                y + 3,
+                405,
+                48,
+                scene_for_option(option),
+                self.elapsed,
+            );
+        }
+        fb.draw_text(72, 316, "ENTREE OU CLIC : RETENIR UNE HYPOTHESE", DIM);
+    }
+
+    fn draw_restore(&self, fb: &mut Framebuffer) {
+        draw_plaque(fb, 22, 72, 595, 257);
+        fb.draw_text_scaled(40, 85, "LA SCENE SANS PAROLES", 2, IVORY);
+        fb.draw_text(40, 112, "RECONSTITUEZ SON INSCRIPTION", DIM);
+        draw_scene(fb, 39, 134, 361, 122, (2, 3, 5), self.elapsed);
+        fb.draw_text(64, 262, "INSCRIPTION MANQUANTE", GOLD);
+        let draft = self.archive.draft();
+        for (index, rune) in draft.iter().copied().enumerate() {
+            let x = 75 + index as i32 * 65;
+            fb.fill_rect(x, 273, 55, 51, STONE);
+            fb.draw_rect(
+                x,
+                273,
+                55,
+                51,
+                if self.archive.slot() == index {
+                    SPIRIT
+                } else {
+                    EDGE
+                },
+            );
+            if rune == EMPTY_RUNE {
+                fb.draw_line(x + 12, 300, x + 42, 300, EDGE);
+            } else {
+                draw_rune(fb, rune, x + 17, 281, 2, IVORY);
+            }
+        }
+        fb.draw_text(435, 167, "SIGNES DISPONIBLES", DIM);
+        for rune in 0..RUNE_COUNT {
+            let x = 438 + i32::from(rune % 3) * 58;
+            let y = 192 + i32::from(rune / 3) * 50;
+            fb.fill_rect(x, y, 50, 43, DEEP);
+            fb.draw_rect(x, y, 50, 43, EDGE);
+            draw_rune(fb, rune, x + 14, y + 5, 2, GOLD);
+        }
+        draw_button(fb, 480, 285, 129, 37, "RETOUR", false);
+    }
+
+    fn draw_recovered(&self, fb: &mut Framebuffer) {
+        draw_plaque(fb, 31, 78, 577, 240);
+        draw_monument(fb, 66, 112, self.elapsed, true);
+        draw_scene(fb, 250, 129, 332, 135, (0, 4, 3), self.elapsed);
+        fb.draw_text_scaled(248, 97, "LA MEMOIRE", 2, IVORY);
+        fb.draw_text_scaled(248, 114, "RESTAUREE", 2, GOLD);
+        fb.draw_text(248, 276, "CE QUE LA PIERRE AVAIT EFFACE", SPIRIT);
+        fb.draw_text(248, 291, "EST ENFIN VISIBLE.", SPIRIT);
+    }
+
+    fn draw_help(&self, fb: &mut Framebuffer) {
+        fb.fill_rect(114, 83, 412, 204, INK);
+        fb.draw_rect(114, 83, 412, 204, GOLD);
+        fb.draw_text_scaled(134, 102, "OBSERVER, DEDUIRE, RESTITUER", 1, IVORY);
+        fb.draw_text(136, 135, "CLIC : CHOISIR UNE ARCHIVE OU UN SIGNE", IVORY);
+        fb.draw_text(136, 155, "TAB / FLECHES : NAVIGUER", IVORY);
+        fb.draw_text(136, 175, "ENTREE : CHOISIR / RETOUR", IVORY);
+        fb.draw_text(136, 195, "S DANS LA SALLE : SCELLER LES DEUX TRACES", IVORY);
+        fb.draw_text(136, 215, "ESPACE EN ECRITURE : EFFACER UN SIGNE", IVORY);
+        fb.draw_text(136, 244, "ECHAP : REVENIR    H : FERMER", DIM);
+    }
+}
+
+impl Game for MemoryGame {
+    fn update(&mut self, frame: &mut Frame<'_>) -> GameResult {
+        self.sounds.ensure_ambience(frame.audio);
+        if frame.input.key(Key::Escape).pressed() && self.archive.page() == Page::Hall && !self.help
+        {
+            return GameResult::Exit;
+        }
+        self.keyboard(frame);
+        if frame.input.mouse_button(MouseButton::Left).pressed()
+            && let Some((x, y)) = frame.input.mouse_position()
+        {
+            self.handle_click(x, y, frame.audio);
+        }
+        self.elapsed += frame.delta_time.as_secs_f32().min(0.06);
         self.draw(frame.framebuffer);
         GameResult::Continue
     }
 }
 
-fn console_index(console: Console) -> usize {
-    match console {
-        Console::First => 0,
-        Console::Second => 1,
+fn hit(x: i32, y: i32, xx: i32, yy: i32, w: i32, h: i32) -> bool {
+    x >= xx && x < xx + w && y >= yy && y < yy + h
+}
+
+fn card_pos(i: usize) -> (i32, i32) {
+    (CARD_X[i % 3], CARD_Y[i / 3])
+}
+
+fn draw_room(fb: &mut Framebuffer, elapsed: f32) {
+    fb.clear(INK);
+    fb.fill_rect(0, 0, WIDTH, 52, DEEP);
+    fb.draw_line(0, 52, 639, 52, GOLD);
+    fb.draw_text_scaled(24, 13, "LES ARCHIVES DU SILENCE", 2, IVORY);
+    fb.draw_text(539, 16, "FRAGMENT 002", GOLD);
+    fb.fill_rect(14, 60, 612, 259, STONE);
+    for i in 0..19 {
+        let x = 22 + i * 31;
+        fb.draw_line(x, 60, x + 7, 64, DUST);
+        fb.draw_line(x, 315, x + 18, 317, DUST);
+        if i % 3 == 0 {
+            fb.draw_line(x + 8, 69, x - 4, 301, Pixel::rgb(38, 49, 55));
+        }
+    }
+    for i in 0..13 {
+        let x = 16 + ((i * 173 + 49) % 605);
+        let y = 64 + ((i * 131 + 29) % 247);
+        let shift = ((elapsed * 4.0) as i32 + i * 3) % 18;
+        fb.draw(x + shift, y, GOLD);
+    }
+    fb.draw_line(13, 60, 13, 319, EDGE);
+    fb.draw_line(626, 60, 626, 319, EDGE);
+}
+
+fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
+    fb.fill_rect(0, 325, 640, 35, INK);
+    fb.draw_line(17, 324, 622, 324, GOLD);
+    let visible = if msg.len() > 66 { &msg[..66] } else { msg };
+    fb.draw_text(22, 335, visible, IVORY);
+    match page {
+        Page::Hall => fb.draw_text(
+            21,
+            349,
+            "H:AIDE  TAB:NAVIGUER  ENTREE:OBSERVER  S:SCELLER",
+            DIM,
+        ),
+        Page::Clip(_) => fb.draw_text(21, 349, "< >:AUTRE ARCHIVE  ENTREE:RETOUR  H:AIDE", DIM),
+        Page::Witness => fb.draw_text(
+            21,
+            349,
+            "FLECHES:SCENE  ENTREE:CONSERVER  ECHAP:RETOUR",
+            DIM,
+        ),
+        Page::Restore => fb.draw_text(
+            21,
+            349,
+            "FLECHES:SIGNE / CASE  ESPACE:EFFACER  ENTREE:RETOUR",
+            DIM,
+        ),
+        Page::Recovered => fb.draw_text(21, 349, "FIN DE CETTE EXPERIENCE. R:RECOMMENCER.", DIM),
     }
 }
 
-fn other_console(console: Console) -> Console {
-    match console {
-        Console::First => Console::Second,
-        Console::Second => Console::First,
-    }
-}
-
-fn adjust_draft(drafts: &mut [[usize; 2]; 2], console: Console, slot: usize, increase: bool) {
-    let value = &mut drafts[console_index(console)][slot];
-    *value = (*value + if increase { 1 } else { 4 }) % 5;
-}
-
-fn inside(x: i32, y: i32, area: (i32, i32, i32, i32)) -> bool {
-    x >= area.0 && y >= area.1 && x < area.0 + area.2 && y < area.1 + area.3
-}
-
-impl FirstRoom {
-    fn select_console(&mut self, desired: Console, audio: &mut dyn gotoo_pixel_engine::Audio) {
-        if !self.world.accessible(desired) {
-            self.message = "PUPITRE INACCESSIBLE.";
-            self.sounds.play(audio, Cue::Reject);
-            return;
-        }
-        self.console = desired;
-        self.slot = 0;
-        self.message = "LIAISON AVEC LE PUPITRE.";
-        self.sounds.play(audio, Cue::Tick);
-    }
-
-    fn submit(&mut self, audio: &mut dyn gotoo_pixel_engine::Audio) {
-        match self
-            .world
-            .submit(self.console, self.symbols[console_index(self.console)])
-        {
-            Reaction::Changed => {
-                self.message = "QUELQUE CHOSE A CHANGE.";
-                let cue = if self.world.second_active() {
-                    Cue::Discovery
-                } else {
-                    Cue::Shift
-                };
-                self.sounds.play(audio, cue);
-            }
-            Reaction::Unchanged => {
-                self.message = "AUCUN CHANGEMENT VISIBLE.";
-                self.sounds.play(audio, Cue::Reject);
-            }
-            Reaction::Invalid => {
-                self.message = "AUCUNE REACTION.";
-                self.sounds.play(audio, Cue::Reject);
-            }
-            Reaction::Inaccessible => {
-                self.message = "INACCESSIBLE.";
-                self.sounds.play(audio, Cue::Reject);
-            }
-        }
-    }
-
-    fn handle_click(&mut self, x: i32, y: i32, audio: &mut dyn gotoo_pixel_engine::Audio) {
-        if inside(x, y, (CONSOLE_ONE.0, CONSOLE_ONE.1, 43, 26)) {
-            self.select_console(Console::First, audio);
-        } else if inside(x, y, (CONSOLE_TWO.0, CONSOLE_TWO.1, 43, 26)) {
-            self.select_console(Console::Second, audio);
-        } else if let Some(index) = SLOT_X
-            .iter()
-            .position(|x0| inside(x, y, (*x0, SLOT_Y, 42, 36)))
-        {
-            if self.slot == index {
-                adjust_draft(&mut self.symbols, self.console, index, true);
-            } else {
-                self.slot = index;
-            }
-            self.sounds.play(audio, Cue::Tick);
-        } else if inside(x, y, (SEND_X, SEND_Y, 95, 32)) {
-            self.submit(audio);
-        }
-    }
-}
-
-impl FirstRoom {
-    fn draw(&self, fb: &mut Framebuffer) {
-        fb.clear(BG);
-        fb.draw_text_scaled(22, 12, "LES ARCHIVES DU SILENCE", 2, TEXT);
-        fb.draw_text(578, 14, "001", MUTED);
-        fb.draw_text(546, 30, "H: AIDE", MUTED);
-        fb.draw_line(20, 42, 619, 42, STONE);
-
-        self.draw_room(fb);
-        self.draw_compact_hud(fb);
-        if self.help {
-            self.draw_help(fb);
-        }
-    }
-
-    fn draw_room(&self, fb: &mut Framebuffer) {
-        fb.fill_rect(20, 51, 600, 254, WALL);
-        fb.draw_rect(20, 51, 600, 254, METAL);
-
-        for i in 0..17 {
-            let x = 32 + i * 34;
-            fb.draw_line(x, 51, x + 20, 65, STONE);
-        }
-        for i in 0..9 {
-            let x = 38 + i * 65;
-            fb.draw_line(x, 54, x, 266, Pixel::rgb(22, 35, 49));
-        }
-        fb.fill_rect(21, 267, 598, 20, STONE);
-        fb.draw_line(21, 266, 617, 266, METAL);
-        for i in 0..18 {
-            let x = 32 + i * 33;
-            fb.draw_line(x, 269, x + 14, 286, WALL);
-        }
-
-        draw_lamp(fb, 124, true, [0, 2]);
-        draw_lamp(fb, 240, false, [1, 2]);
-        draw_machine(fb, self.world.first_active(), self.elapsed);
-        draw_door(fb, self.world.second_active());
-
-        // Wires make the local target of each console unambiguous.
-        let first_wire = if self.console == Console::First {
-            ACCENT
-        } else {
-            METAL
-        };
-        let second_wire = if self.console == Console::Second {
-            ACCENT
-        } else {
-            METAL
-        };
-        fb.draw_line(355, 235, 355, 250, first_wire);
-        fb.draw_line(355, 250, 377, 250, first_wire);
-        fb.draw_line(533, 242, 533, 251, second_wire);
-        fb.draw_line(533, 251, 530, 251, second_wire);
-
-        // The vapor blocks the physical way to the remote console.
-        if self.world.first_active() {
-            let drift = (self.elapsed * 14.0).floor() as i32 % 17;
-            for i in 0..9 {
-                let y = 100 + i * 16 + drift;
-                let x = 424 + (i % 3) * 7;
-                fb.fill_rect(x, y, 83, 10, STEAM);
-                fb.fill_rect(x + 10, y + 10, 70, 5, METAL);
-            }
-        } else {
-            fb.draw_line(410, 227, 484, 244, ACCENT);
-            fb.draw_line(485, 244, 513, 244, METAL);
-        }
-
-        draw_console_marker(
-            fb,
-            CONSOLE_ONE,
-            1,
-            self.console == Console::First,
-            true,
-            self.elapsed,
-        );
-        draw_console_marker(
-            fb,
-            CONSOLE_TWO,
-            2,
-            self.console == Console::Second,
-            self.world.accessible(Console::Second),
-            self.elapsed,
-        );
-        let (x, y, width, height) = match self.console {
-            Console::First => (296, 142, 123, 99),
-            Console::Second => (520, 114, 92, 151),
-        };
-        draw_focus_corners(fb, x, y, width, height, ACCENT);
-
-        if self.world.second_active() {
-            fb.fill_rect(105, 104, 429, 100, DARK);
-            fb.draw_rect(105, 104, 429, 100, ACCENT);
-            fb.draw_text_scaled(140, 125, "LE PASSAGE EST OUVERT", 2, LIGHT);
-            fb.draw_text_scaled(173, 169, "LE SIGNAL A REPONDU.", 1, ACCENT);
-        }
-    }
-
-    fn draw_compact_hud(&self, fb: &mut Framebuffer) {
-        fb.fill_rect(21, 309, 598, 48, DARK);
-        fb.draw_line(21, 309, 618, 309, METAL);
-        if self.world.second_active() {
-            fb.draw_text_scaled(40, 321, "FIN DU PROTOTYPE", 2, TEXT);
-            fb.draw_text(443, 331, "R: REJOUER", MUTED);
-            return;
-        }
-        fb.draw_text(34, 315, "PUPITRE ACTIF", MUTED);
-        fb.draw_text_scaled(
-            35,
-            329,
-            if self.console == Console::First {
-                "01"
-            } else {
-                "02"
-            },
-            2,
-            ACCENT,
-        );
-        fb.draw_text(90, 336, "TAB: CHANGER", MUTED);
-        let draft = self.symbols[console_index(self.console)];
-        for (index, x) in SLOT_X.iter().enumerate() {
-            fb.fill_rect(*x, SLOT_Y, 42, 36, STONE);
-            fb.draw_rect(
-                *x,
-                SLOT_Y,
-                42,
-                36,
-                if self.slot == index { ACCENT } else { METAL },
-            );
-            draw_glyph(fb, draft[index], *x + 9, SLOT_Y + 5, 2, TEXT);
-            fb.draw_text(*x + 1, 310, if index == 0 { "1" } else { "2" }, MUTED);
-        }
-        fb.draw_text(344, 317, "2 SIGNES", MUTED);
-        fb.draw_text(344, 335, self.message, TEXT);
-        fb.fill_rect(SEND_X, SEND_Y, 95, 32, STONE);
-        fb.draw_rect(SEND_X, SEND_Y, 95, 32, ACCENT);
-        fb.draw_text(528, 332, "ENVOYER", TEXT);
-        if self.sounds.unavailable() {
-            fb.draw_text(505, 351, "AUDIO INDISPO", LIGHT);
-        }
-    }
-
-    fn draw_help(&self, fb: &mut Framebuffer) {
-        fb.fill_rect(129, 66, 391, 151, DARK);
-        fb.draw_rect(129, 66, 391, 151, ACCENT);
-        fb.draw_text_scaled(153, 86, "COMMANDES", 2, LIGHT);
-        fb.draw_text_scaled(153, 117, "GAUCHE / DROITE : CASE", 1, TEXT);
-        fb.draw_text_scaled(153, 134, "HAUT / BAS : SYMBOLE", 1, TEXT);
-        fb.draw_text_scaled(153, 151, "ENTREE : ESSAYER", 1, TEXT);
-        fb.draw_text_scaled(153, 168, "TAB : AUTRE PUPITRE", 1, TEXT);
-        fb.draw_text_scaled(153, 185, "CLIC : PUPITRE / GLYPHE / ENVOYER", 1, MUTED);
-        fb.draw_text(153, 202, "R: RESET   H: FERMER   ESC: QUITTER", MUTED);
-    }
-}
-
-fn draw_console_marker(
-    fb: &mut Framebuffer,
-    (x, y): (i32, i32),
-    number: u8,
-    selected: bool,
-    accessible: bool,
-    elapsed: f32,
-) {
-    let outline = if selected {
-        ACCENT
-    } else if accessible {
-        METAL
-    } else {
-        MUTED
-    };
-    fb.fill_rect(x, y, 43, 26, DARK);
-    fb.draw_rect(x, y, 43, 26, outline);
-    fb.draw_text_scaled(
-        x + 8,
-        y + 5,
-        if number == 1 { "1" } else { "2" },
-        2,
-        outline,
+fn draw_plaque(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32) {
+    fb.fill_rect(x, y, w, h, DEEP);
+    fb.draw_rect(x, y, w, h, EDGE);
+    fb.draw_rect(x + 4, y + 4, w - 8, h - 8, DUST);
+    fb.draw_line(x + 14, y + 16, x + 35, y + 16, GOLD);
+    fb.draw_line(
+        x + w as i32 - 39,
+        y + h as i32 - 17,
+        x + w as i32 - 17,
+        y + h as i32 - 17,
+        GOLD,
     );
-    fb.draw_line(x + 26, y + 9, x + 35, y + 9, outline);
-    fb.draw_line(x + 26, y + 15, x + 35, y + 15, outline);
-    if selected {
-        let pulse = if (elapsed * 3.0) as i32 % 2 == 0 {
-            ACCENT
-        } else {
-            TEXT
-        };
-        fb.draw_rect(x - 3, y - 3, 49, 32, pulse);
-    }
 }
 
-fn draw_focus_corners(fb: &mut Framebuffer, x: i32, y: i32, width: u32, height: u32, color: Pixel) {
-    let width = width as i32;
-    let height = height as i32;
-    for &(cx, cy, sx, sy) in &[
-        (x, y, 1, 1),
-        (x + width, y, -1, 1),
-        (x, y + height, 1, -1),
-        (x + width, y + height, -1, -1),
-    ] {
-        fb.draw_line(cx, cy, cx + sx * 11, cy, color);
-        fb.draw_line(cx, cy, cx, cy + sy * 11, color);
-    }
+fn draw_button(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32, label: &str, focus: bool) {
+    fb.fill_rect(x, y, w, h, if focus { STONE } else { DEEP });
+    fb.draw_rect(x, y, w, h, if focus { SPIRIT } else { GOLD });
+    let (tx, ty) = Framebuffer::text_size(label, 1);
+    fb.draw_text(
+        x + (w as i32 - tx as i32) / 2,
+        y + (h as i32 - ty as i32) / 2,
+        label,
+        IVORY,
+    );
 }
 
-fn glyph_band(fb: &mut Framebuffer, x: i32, y: i32, symbols: [usize; 2]) {
-    fb.fill_rect(x, y, 73, 29, DARK);
-    fb.draw_rect(x, y, 73, 29, METAL);
-    draw_glyph(fb, symbols[0], x + 7, y + 5, 2, ACCENT);
-    draw_glyph(fb, symbols[1], x + 39, y + 5, 2, ACCENT);
-}
-
-fn draw_glyph(fb: &mut Framebuffer, glyph: usize, x: i32, y: i32, scale: i32, color: Pixel) {
-    let p = |dx: i32, dy: i32| (x + dx * scale, y + dy * scale);
-    let mut line = |a: (i32, i32), b: (i32, i32)| {
-        let (x0, y0) = p(a.0, a.1);
-        let (x1, y1) = p(b.0, b.1);
-        fb.draw_line(x0, y0, x1, y1, color);
+// All runes follow a shared six-column etching style; none is a plain polygon.
+fn draw_rune(fb: &mut Framebuffer, rune: u8, x: i32, y: i32, scale: i32, color: Pixel) {
+    const A: &[(i32, i32, i32, i32)] = &[
+        (1, 13, 4, 3),
+        (4, 3, 8, 1),
+        (8, 1, 12, 6),
+        (12, 6, 8, 9),
+        (8, 9, 13, 14),
+        (3, 8, 10, 8),
+    ];
+    const B: &[(i32, i32, i32, i32)] = &[
+        (2, 2, 6, 6),
+        (6, 6, 11, 0),
+        (6, 6, 7, 14),
+        (7, 14, 13, 11),
+        (1, 12, 7, 10),
+        (2, 2, 1, 7),
+    ];
+    const C: &[(i32, i32, i32, i32)] = &[
+        (1, 2, 13, 8),
+        (13, 8, 5, 13),
+        (5, 13, 2, 9),
+        (2, 9, 8, 4),
+        (8, 4, 12, 1),
+        (5, 13, 12, 14),
+    ];
+    const D: &[(i32, i32, i32, i32)] = &[
+        (7, 0, 7, 14),
+        (3, 4, 7, 2),
+        (7, 2, 12, 5),
+        (2, 10, 7, 12),
+        (7, 12, 13, 9),
+        (12, 5, 11, 9),
+    ];
+    const E: &[(i32, i32, i32, i32)] = &[
+        (4, 0, 10, 2),
+        (10, 2, 9, 8),
+        (9, 8, 13, 13),
+        (4, 0, 2, 7),
+        (2, 7, 7, 14),
+        (7, 14, 13, 13),
+        (4, 9, 10, 9),
+    ];
+    const F: &[(i32, i32, i32, i32)] = &[
+        (7, 0, 12, 5),
+        (12, 5, 9, 11),
+        (9, 11, 3, 13),
+        (3, 13, 1, 8),
+        (1, 8, 5, 5),
+        (5, 5, 10, 7),
+        (10, 7, 6, 13),
+    ];
+    let strokes = match rune {
+        0 => A,
+        1 => B,
+        2 => C,
+        3 => D,
+        4 => E,
+        _ => F,
     };
-    match glyph {
+    for &(x1, y1, x2, y2) in strokes {
+        fb.draw_line(
+            x + x1 * scale,
+            y + y1 * scale,
+            x + x2 * scale,
+            y + y2 * scale,
+            color,
+        );
+    }
+    let (dx, dy) = match rune {
+        0 => (1, 2),
+        1 => (12, 14),
+        2 => (0, 11),
+        3 => (13, 1),
+        4 => (1, 13),
+        _ => (12, 1),
+    };
+    fb.fill_rect(
+        x + dx * scale,
+        y + dy * scale,
+        scale.max(1) as u32,
+        scale.max(1) as u32,
+        color,
+    );
+}
+
+fn draw_sentence(
+    fb: &mut Framebuffer,
+    sentence: &[u8; 3],
+    x: i32,
+    y: i32,
+    scale: i32,
+    color: Pixel,
+) {
+    for (index, rune) in sentence.iter().copied().enumerate() {
+        draw_rune(fb, rune, x + index as i32 * 31 * scale, y, scale, color);
+        if index < 2 {
+            fb.draw_line(
+                x + (index as i32 * 31 + 21) * scale,
+                y + 16 * scale,
+                x + (index as i32 * 31 + 25) * scale,
+                y + 16 * scale,
+                DUST,
+            );
+        }
+    }
+}
+
+type Scene = (u8, u8, u8); // verb, agent, patient
+fn event_for_clip(i: usize) -> Scene {
+    const EVENTS: [Scene; 6] = [
+        (0, 3, 4),
+        (0, 4, 5),
+        (1, 3, 5),
+        (1, 4, 5),
+        (2, 3, 4),
+        (2, 4, 3),
+    ];
+    EVENTS[i]
+}
+
+fn scene_for_option(i: usize) -> Scene {
+    match i {
+        0 => (0, 3, 5),
+        1 => (0, 4, 3),
+        _ => (1, 3, 4),
+    }
+}
+
+fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene, time: f32) {
+    let (verb, agent, patient) = scene;
+    fb.fill_rect(x, y, w as u32, h as u32, INK);
+    // Ruined arch fragments and distant horizontal depth planes.
+    fb.draw_line(x + 4, y + h - 9, x + w - 5, y + h - 9, EDGE);
+    fb.draw_line(x + 4, y + 5, x + 4, y + h - 9, DUST);
+    fb.draw_line(x + w - 5, y + 5, x + w - 5, y + h - 9, DUST);
+    let unit = if h >= 110 { 2 } else { 1 };
+    let base = y + h - 17;
+    let ax = x + w / 3;
+    let px = x + w * 2 / 3;
+    let phase = (time * 1.65).sin();
+    let movement = (phase * (7 * unit) as f32) as i32;
+    // Action direction is from actor to patient regardless of horizontal iconography.
+    draw_entity(fb, ax, base, agent, unit, GOLD, false);
+    if verb == 2 {
+        fb.draw_line(
+            ax + 7 * unit,
+            base - 12 * unit,
+            px - 6 * unit,
+            base - 16 * unit,
+            SPIRIT,
+        );
+        draw_entity(
+            fb,
+            px + movement,
+            base - 6 * unit,
+            patient,
+            unit,
+            IVORY,
+            false,
+        );
+        fb.draw_line(
+            px - 12 * unit,
+            base - 5 * unit,
+            px + 12 * unit,
+            base - 5 * unit,
+            SPIRIT,
+        );
+        fb.draw_line(px - 10 * unit, base + 1, px + 10 * unit, base + 1, RUST);
+    } else {
+        let still_dormant = verb == 1 && phase <= 0.0;
+        draw_entity(
+            fb,
+            px,
+            base,
+            patient,
+            unit,
+            if verb == 1 { BLAZE } else { IVORY },
+            still_dormant,
+        );
+    }
+    match verb {
         0 => {
-            line((6, 0), (0, 12));
-            line((0, 12), (12, 12));
-            line((12, 12), (6, 0));
+            // A barrier consistently surrounds the patient, never the actor.
+            let radius = 19 * unit + (phase.abs() * (3 * unit) as f32) as i32;
+            fb.draw_circle(px, base - 13 * unit, radius as u32, SPIRIT);
+            fb.draw_line(
+                px - 21 * unit,
+                base - 13 * unit,
+                px - 13 * unit,
+                base - 24 * unit,
+                SPIRIT,
+            );
+            fb.draw_line(
+                px + 21 * unit,
+                base - 13 * unit,
+                px + 13 * unit,
+                base - 24 * unit,
+                SPIRIT,
+            );
+            fb.draw_line(
+                ax + 9 * unit,
+                base - 20 * unit,
+                px - 20 * unit,
+                base - 20 * unit,
+                GOLD,
+            );
         }
         1 => {
-            // Diamond-like octagon for clarity at variable logical resolutions.
-            for (a, b) in [
-                ((4, 0), (9, 0)),
-                ((9, 0), (12, 4)),
-                ((12, 4), (12, 9)),
-                ((12, 9), (9, 12)),
-                ((9, 12), (4, 12)),
-                ((4, 12), (0, 9)),
-                ((0, 9), (0, 4)),
-                ((0, 4), (4, 0)),
-            ] {
-                line(a, b);
+            // Pulse travels from actor to a patient coming back into light.
+            fb.draw_line(
+                ax + 11 * unit,
+                base - 24 * unit,
+                px - 12 * unit,
+                base - 24 * unit,
+                BLAZE,
+            );
+            if phase > 0.0 {
+                for (dx, dy) in [(-17, -27), (14, -29), (-14, -9), (17, -11)] {
+                    fb.draw_line(
+                        px + dx * unit,
+                        base + dy * unit,
+                        px + (dx + (if dx < 0 { -4 } else { 4 })) * unit,
+                        base + (dy - 2) * unit,
+                        BLAZE,
+                    );
+                }
             }
         }
-        2 => {
-            line((6, 0), (12, 6));
-            line((12, 6), (6, 12));
-            line((6, 12), (0, 6));
-            line((0, 6), (6, 0));
-        }
+        _ => {}
+    }
+}
+
+fn draw_entity(
+    fb: &mut Framebuffer,
+    x: i32,
+    y: i32,
+    kind: u8,
+    scale: i32,
+    color: Pixel,
+    faded: bool,
+) {
+    let color = if faded { RUST } else { color };
+    match kind {
         3 => {
-            line((0, 0), (12, 0));
-            line((12, 0), (12, 12));
-            line((12, 12), (0, 12));
-            line((0, 12), (0, 0));
-            line((4, 2), (4, 10));
+            // Tall watcher with staff, mantle, and a two-pronged crown.
+            fb.fill_circle(x, y - 30 * scale, (5 * scale) as u32, color);
+            fb.draw_line(
+                x - 10 * scale,
+                y - 38 * scale,
+                x - 7 * scale,
+                y - 34 * scale,
+                GOLD,
+            );
+            fb.draw_line(
+                x + 10 * scale,
+                y - 38 * scale,
+                x + 7 * scale,
+                y - 34 * scale,
+                GOLD,
+            );
+            fb.fill_rect(
+                x - 5 * scale,
+                y - 23 * scale,
+                (10 * scale) as u32,
+                (18 * scale) as u32,
+                color,
+            );
+            fb.draw_line(
+                x - 10 * scale,
+                y - 20 * scale,
+                x - 13 * scale,
+                y - 7 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 10 * scale,
+                y - 20 * scale,
+                x + 9 * scale,
+                y - 7 * scale,
+                color,
+            );
+            fb.draw_line(x - 2 * scale, y - 6 * scale, x - 7 * scale, y, color);
+            fb.draw_line(x + 2 * scale, y - 6 * scale, x + 6 * scale, y, color);
+            fb.draw_line(
+                x + 13 * scale,
+                y - 28 * scale,
+                x + 13 * scale,
+                y + scale,
+                GOLD,
+            );
+        }
+        4 => {
+            // Distinct short, hooded silhouette, open palm.
+            fb.fill_circle(x, y - 19 * scale, (5 * scale) as u32, color);
+            fb.draw_line(x - 5 * scale, y - 21 * scale, x, y - 29 * scale, GOLD);
+            fb.draw_line(x, y - 29 * scale, x + 7 * scale, y - 20 * scale, GOLD);
+            fb.fill_rect(
+                x - 4 * scale,
+                y - 13 * scale,
+                (8 * scale) as u32,
+                (12 * scale) as u32,
+                color,
+            );
+            fb.draw_line(
+                x - 4 * scale,
+                y - 11 * scale,
+                x - 12 * scale,
+                y - 5 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 4 * scale,
+                y - 11 * scale,
+                x + 11 * scale,
+                y - 9 * scale,
+                color,
+            );
+            fb.draw_line(
+                x - 3 * scale,
+                y - scale,
+                x - 7 * scale,
+                y + 3 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 3 * scale,
+                y - scale,
+                x + 7 * scale,
+                y + 3 * scale,
+                color,
+            );
         }
         _ => {
-            line((3, 0), (9, 0));
-            line((9, 0), (12, 6));
-            line((12, 6), (9, 12));
-            line((9, 12), (3, 12));
-            line((3, 12), (0, 6));
-            line((0, 6), (3, 0));
+            // Ember on its independent pedestal.
+            fb.fill_rect(
+                x - 11 * scale,
+                y - 6 * scale,
+                (22 * scale) as u32,
+                (7 * scale) as u32,
+                STONE,
+            );
+            fb.draw_line(
+                x - 13 * scale,
+                y - 6 * scale,
+                x + 13 * scale,
+                y - 6 * scale,
+                GOLD,
+            );
+            fb.fill_circle(
+                x,
+                y - 21 * scale,
+                (7 * scale) as u32,
+                if faded { RUST } else { BLAZE },
+            );
+            fb.draw_circle(x, y - 21 * scale, (11 * scale) as u32, GOLD);
+            fb.draw_line(x, y - 37 * scale, x + 3 * scale, y - 29 * scale, BLAZE);
         }
     }
 }
 
-fn draw_lamp(fb: &mut Framebuffer, x: i32, lit: bool, symbols: [usize; 2]) {
-    fb.fill_rect(x - 11, 186, 22, 12, STONE);
-    fb.draw_line(x, 168, x, 219, METAL);
-    fb.draw_circle(x, 141, 22, if lit { LIGHT } else { METAL });
-    fb.fill_circle(x, 141, 13, if lit { LIGHT } else { DARK });
-    if lit {
-        for (dx, dy) in [(-32, 0), (32, 0), (0, -32)] {
-            fb.draw_line(x + dx / 2, 141 + dy / 2, x + dx, 141 + dy, LIGHT);
-        }
-    }
-    glyph_band(fb, x - 37, 223, symbols);
-}
-
-fn draw_machine(fb: &mut Framebuffer, active: bool, elapsed: f32) {
-    glyph_band(fb, 317, 77, if active { [0, 3] } else { [1, 3] });
-    fb.fill_rect(299, 145, 117, 92, STONE);
-    fb.draw_rect(299, 145, 117, 92, METAL);
-    fb.draw_circle(355, 188, 30, METAL);
-    fb.fill_circle(355, 188, 18, if active { LIGHT } else { DARK });
-    if active {
-        let pulse = if (elapsed * 3.0) as i32 % 2 == 0 {
-            ACCENT
-        } else {
-            LIGHT
-        };
-        fb.fill_rect(392, 158, 16, 18, pulse);
+fn draw_monument(fb: &mut Framebuffer, x: i32, y: i32, time: f32, revealed: bool) {
+    let w = if revealed { 147 } else { 149 };
+    let h = if revealed { 147 } else { 134 };
+    fb.fill_rect(x, y, w, h, DEEP);
+    fb.draw_rect(x, y, w, h, GOLD);
+    fb.draw_line(x + 16, y + 12, x + w as i32 - 16, y + 12, RUST);
+    fb.draw_text(x + 29, y + 15, "LE MONUMENT", DIM);
+    draw_entity(fb, x + 71, y + 110, 3, 2, IVORY, false);
+    if revealed {
+        draw_entity(fb, x + 32, y + 107, 4, 2, SPIRIT, false);
+        fb.draw_circle(x + 71, y + 84, 32, SPIRIT);
     } else {
-        fb.draw_rect(392, 158, 16, 18, MUTED);
+        // The erased secondary figure is deliberately visible as damage.
+        fb.draw_line(x + 19, y + 82, x + 45, y + 108, RUST);
+        fb.draw_line(x + 19, y + 108, x + 45, y + 82, RUST);
+        fb.draw_line(x + 16, y + 110, x + 44, y + 113, DUST);
     }
-    fb.fill_rect(320, 240, 83, 25, STONE);
-    fb.draw_line(350, 237, 350, 265, METAL);
-}
-
-fn draw_door(fb: &mut Framebuffer, open: bool) {
-    glyph_band(fb, 528, 75, if open { [0, 4] } else { [1, 4] });
-    fb.fill_rect(524, 118, 84, 147, STONE);
-    fb.draw_rect(524, 118, 84, 147, METAL);
-    fb.fill_rect(534, 129, 64, 134, DARK);
-    if open {
-        fb.draw_line(536, 130, 593, 130, ACCENT);
-        fb.draw_line(536, 131, 536, 260, ACCENT);
+    let shimmer = if (time * 2.0) as i32 % 2 == 0 {
+        GOLD
     } else {
-        fb.draw_line(565, 130, 565, 260, METAL);
-        fb.fill_rect(548, 207, 34, 6, LIGHT);
-    }
+        EDGE
+    };
+    fb.draw_line(
+        x + 10,
+        y + h as i32 - 8,
+        x + w as i32 - 10,
+        y + h as i32 - 8,
+        shimmer,
+    );
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     run(
         EngineConfig {
-            title: "Les Archives du Silence - Prototype 001".into(),
+            title: "Les Archives du Silence - Les Remanences (Prototype 002)".into(),
             framebuffer_width: WIDTH,
             framebuffer_height: HEIGHT,
             window_width: 1280,
             window_height: 720,
         },
-        FirstRoom::new()?,
+        MemoryGame::new()?,
     )?;
     Ok(())
 }
@@ -525,52 +953,70 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gotoo_pixel_engine::NoopAudio;
 
     #[test]
-    fn console_selection_has_stable_distinct_indices() {
-        assert_eq!(console_index(Console::First), 0);
-        assert_eq!(console_index(Console::Second), 1);
-        assert_eq!(other_console(other_console(Console::First)), Console::First);
+    fn clickable_archive_regions_are_non_overlapping() {
+        for i in 0..6 {
+            let (x, y) = card_pos(i);
+            assert!(hit(x + 1, y + 1, x, y, CARD_W, CARD_H));
+            for j in i + 1..6 {
+                let (nx, ny) = card_pos(j);
+                assert!(!hit(nx + 1, ny + 1, x, y, CARD_W, CARD_H));
+            }
+        }
     }
 
     #[test]
-    fn glyph_drafts_are_independent_between_consoles() {
-        let mut drafts = [[0, 0], [0, 0]];
-        adjust_draft(&mut drafts, Console::First, 0, true);
-        adjust_draft(&mut drafts, Console::Second, 1, false);
-        assert_eq!(drafts, [[1, 0], [0, 4]]);
-        adjust_draft(&mut drafts, Console::First, 0, false);
-        assert_eq!(drafts[0], [0, 0]);
-        assert_eq!(drafts[1], [0, 4]);
-    }
-
-    #[test]
-    fn focus_regions_correspond_to_distinct_visible_controls() {
-        assert!(inside(390, 250, (CONSOLE_ONE.0, CONSOLE_ONE.1, 43, 26)));
-        assert!(!inside(390, 250, (CONSOLE_TWO.0, CONSOLE_TWO.1, 43, 26)));
-        assert!(inside(504, 250, (CONSOLE_TWO.0, CONSOLE_TWO.1, 43, 26)));
-        assert!(inside(527, 333, (SEND_X, SEND_Y, 95, 32)));
-        assert!(!inside(470, 333, (SEND_X, SEND_Y, 95, 32)));
-    }
-
-    #[test]
-    fn switching_console_is_rejected_until_accessible() {
-        use gotoo_pixel_engine::NoopAudio;
-
-        let mut room = FirstRoom::new().expect("procedural audio should generate");
+    fn hub_navigation_changes_pages_without_implicit_resolution() {
+        let mut game = MemoryGame::new().expect("audio bank");
         let mut audio = NoopAudio::default();
-        room.select_console(Console::Second, &mut audio);
-        assert_eq!(room.console, Console::First);
-
-        room.world.submit(Console::First, [1, 3]);
-        room.select_console(Console::Second, &mut audio);
-        assert_eq!(room.console, Console::Second);
+        game.activate_hall(0, &mut audio);
+        assert_eq!(game.archive.page(), Page::Clip(0));
+        game.archive.back();
+        game.activate_hall(6, &mut audio);
+        assert_eq!(game.archive.page(), Page::Witness);
+        game.pick_witness(1, &mut audio);
+        assert_eq!(game.archive.page(), Page::Hall);
+        assert!(!game.archive.recovered());
     }
 
     #[test]
-    fn world_rejects_second_console_before_it_is_reachable() {
-        let world = World::default();
-        assert!(!world.accessible(Console::Second));
-        assert!(world.accessible(Console::First));
+    fn witness_and_restoration_do_not_emit_correctness_per_part() {
+        let mut game = MemoryGame::new().expect("audio bank");
+        let mut audio = NoopAudio::default();
+        game.archive.open_witness();
+        game.pick_witness(1, &mut audio);
+        game.archive.open_restore();
+        game.pick_rune(0, &mut audio);
+        assert_eq!(game.archive.commit(), Verdict::MissingEvidence);
+        assert!(!game.archive.recovered());
+    }
+
+    #[test]
+    fn different_frames_change_the_visible_evidence_for_each_action() {
+        for verb in 0..3 {
+            let mut before = Framebuffer::new(640, 360);
+            let mut after = Framebuffer::new(640, 360);
+            draw_scene(&mut before, 40, 40, 380, 130, (verb, 4, 5), 0.0);
+            draw_scene(&mut after, 40, 40, 380, 130, (verb, 4, 5), 1.0);
+            assert_ne!(
+                before.as_rgba8(),
+                after.as_rgba8(),
+                "each type of memory must animate"
+            );
+        }
+    }
+
+    #[test]
+    fn custom_runic_alphabet_draws_safely_at_all_expected_scales() {
+        let mut fb = Framebuffer::new(640, 360);
+        for rune in 0..RUNE_COUNT {
+            draw_rune(&mut fb, rune, 20 + 65 * i32::from(rune), 15, 1, IVORY);
+            draw_rune(&mut fb, rune, 20 + 65 * i32::from(rune), 55, 2, IVORY);
+        }
+        assert_eq!(fb.width(), 640);
+        assert_eq!(fb.height(), 360);
+        assert!(fb.as_rgba8().iter().any(|byte| *byte != 0));
     }
 }
