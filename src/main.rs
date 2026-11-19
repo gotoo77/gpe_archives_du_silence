@@ -714,6 +714,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
         );
         fb.draw_line(px - 10 * unit, base + 1, px + 10 * unit, base + 1, RUST);
     } else {
+        let still_dormant = verb == 1 && phase <= 0.0;
         draw_entity(
             fb,
             px,
@@ -721,13 +722,14 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
             patient,
             unit,
             if verb == 1 { BLAZE } else { IVORY },
-            verb == 1,
+            still_dormant,
         );
     }
     match verb {
         0 => {
             // A barrier consistently surrounds the patient, never the actor.
-            fb.draw_circle(px, base - 13 * unit, (21 * unit) as u32, SPIRIT);
+            let radius = 19 * unit + (phase.abs() * (3 * unit) as f32) as i32;
+            fb.draw_circle(px, base - 13 * unit, radius as u32, SPIRIT);
             fb.draw_line(
                 px - 21 * unit,
                 base - 13 * unit,
@@ -759,14 +761,15 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
                 base - 24 * unit,
                 BLAZE,
             );
-            for (dx, dy) in [(-17, -27), (14, -29), (-14, -9), (17, -11)] {
-                fb.draw_line(
-                    px + dx * unit,
-                    base + dy * unit,
-                    px + (dx + (if dx < 0 { -4 } else { 4 })) * unit,
-                    base + (dy - 2) * unit,
-                    BLAZE,
-                );
+            if phase > 0.0 {
+                for (dx, dy) in [(-17, -27), (14, -29), (-14, -9), (17, -11)] {
+                    fb.draw_line(
+                        px + dx * unit,
+                        base + dy * unit,
+                        px + (dx + (if dx < 0 { -4 } else { 4 })) * unit,
+                        BLAZE,
+                    );
+                }
             }
         }
         _ => {}
@@ -987,6 +990,21 @@ mod tests {
         game.pick_rune(0, &mut audio);
         assert_eq!(game.archive.commit(), Verdict::MissingEvidence);
         assert!(!game.archive.recovered());
+    }
+
+    #[test]
+    fn different_frames_change_the_visible_evidence_for_each_action() {
+        for verb in 0..3 {
+            let mut before = Framebuffer::new(640, 360);
+            let mut after = Framebuffer::new(640, 360);
+            draw_scene(&mut before, 40, 40, 380, 130, (verb, 4, 5), 0.0);
+            draw_scene(&mut after, 40, 40, 380, 130, (verb, 4, 5), 1.0);
+            assert_ne!(
+                before.as_rgba8(),
+                after.as_rgba8(),
+                "each type of memory must animate"
+            );
+        }
     }
 
     #[test]
