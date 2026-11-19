@@ -39,6 +39,13 @@ Commandes dans le jeu :
 - Entree : tenter une combinaison.
 - H : afficher ou masquer l'aide.
 - Tab : changer de pupitre, si accessible.
+- Cliquer sur le pupitre numerote directement dans la salle : le selectionner.
+- Cliquer sur une case du HUD : la selectionner ; un second clic fait defiler le glyphe.
+- Cliquer sur ENVOYER : tenter la combinaison sur le pupitre actif.
+
+Le pupitre actif est maintenant **surligne directement dans la salle**, ainsi que
+l'appareil auquel il est relie. La saisie des deux glyphes reste distincte pour
+chacun des deux pupitres. Aucun sens des glyphes n'est revele par l'interface.
 - R : recommencer.
 - Echap : quitter.
 
@@ -60,7 +67,11 @@ cargo test --locked --all-targets
 cargo clippy --locked --all-targets --all-features -- -D warnings
 ```
 
-Le `Cargo.lock` n'est pas encore versionne ; une resolution provisoire est generee\navant les controles. La generation puis le commit du lockfile sont requis avant\nde considerer la beta reproductible.\n\nLe prototype utilise l'API publique du moteur GPE sur une revision Git
+Le `Cargo.lock` n'est pas encore versionne ; une resolution provisoire est generee
+avant les controles. La generation puis le commit du lockfile sont requis avant
+de considerer la beta reproductible.
+
+Le prototype utilise l'API publique du moteur GPE sur une revision Git
 pointee dans `Cargo.toml`. Aucun changement du moteur n'est requis
 par la conception du prototype.
 
