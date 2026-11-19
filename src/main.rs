@@ -98,10 +98,10 @@ impl Game for FirstRoom {
             if frame.input.key(Key::Enter).pressed() {
                 self.submit(frame.audio);
             }
-            if frame.input.mouse_button(MouseButton::Left).pressed() {
-                if let Some((x, y)) = frame.input.mouse_position() {
-                    self.handle_click(x, y, frame.audio);
-                }
+            if frame.input.mouse_button(MouseButton::Left).pressed()
+                && let Some((x, y)) = frame.input.mouse_position()
+            {
+                self.handle_click(x, y, frame.audio);
             }
         }
         self.elapsed += frame.delta_time.as_secs_f32().min(0.10);
@@ -508,6 +508,20 @@ fn draw_door(fb: &mut Framebuffer, open: bool) {
     }
 }
 
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    run(
+        EngineConfig {
+            title: "Les Archives du Silence - Prototype 001".into(),
+            framebuffer_width: WIDTH,
+            framebuffer_height: HEIGHT,
+            window_width: 1280,
+            window_height: 720,
+        },
+        FirstRoom::new()?,
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -561,16 +575,3 @@ mod tests {
     }
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    run(
-        EngineConfig {
-            title: "Les Archives du Silence - Prototype 001".into(),
-            framebuffer_width: WIDTH,
-            framebuffer_height: HEIGHT,
-            window_width: 1280,
-            window_height: 720,
-        },
-        FirstRoom::new()?,
-    )?;
-    Ok(())
-}
