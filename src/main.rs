@@ -284,8 +284,22 @@ impl MemoryGame {
             let (x, y) = card_pos(index);
             let focused = self.archive.focus() == index;
             fb.fill_rect(x, y, CARD_W as u32, CARD_H as u32, DEEP);
-            fb.draw_rect(x, y, CARD_W as u32, CARD_H as u32, if focused { GOLD } else { EDGE });
-            draw_scene(fb, x + 8, y + 8, 112, 58, event_for_clip(index), self.elapsed);
+            fb.draw_rect(
+                x,
+                y,
+                CARD_W as u32,
+                CARD_H as u32,
+                if focused { GOLD } else { EDGE },
+            );
+            draw_scene(
+                fb,
+                x + 8,
+                y + 8,
+                112,
+                58,
+                event_for_clip(index),
+                self.elapsed,
+            );
             fb.fill_rect(x + 5, y + 70, 117, 23, INK);
             draw_sentence(fb, &CLUES[index], x + 22, y + 73, 1, IVORY);
             if self.archive.watched(index) {
@@ -304,7 +318,20 @@ impl MemoryGame {
         draw_plaque(fb, 25, 73, 431, 233);
         fb.draw_text(44, 89, "REMANENCE", GOLD);
         fb.draw_text_scaled(41, 106, "ARCHIVE", 2, IVORY);
-        fb.draw_text_scaled(173, 106, match index { 0=>"01",1=>"02",2=>"03",3=>"04",4=>"05",_=>"06" }, 2, GOLD);
+        fb.draw_text_scaled(
+            173,
+            106,
+            match index {
+                0 => "01",
+                1 => "02",
+                2 => "03",
+                3 => "04",
+                4 => "05",
+                _ => "06",
+            },
+            2,
+            GOLD,
+        );
         draw_scene(fb, 49, 143, 383, 135, event_for_clip(index), self.elapsed);
         fb.draw_text(478, 90, "TRACE INSCRITE", DIM);
         fb.draw_line(477, 105, 612, 105, EDGE);
@@ -325,8 +352,26 @@ impl MemoryGame {
             let active = self.testimony_focus == option;
             fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
             fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
-            fb.draw_text_scaled(91, y + 16, match option {0=>"I",1=>"II",_=>"III"}, 2, GOLD);
-            draw_scene(fb, 155, y + 3, 405, 48, scene_for_option(option), self.elapsed);
+            fb.draw_text_scaled(
+                91,
+                y + 16,
+                match option {
+                    0 => "I",
+                    1 => "II",
+                    _ => "III",
+                },
+                2,
+                GOLD,
+            );
+            draw_scene(
+                fb,
+                155,
+                y + 3,
+                405,
+                48,
+                scene_for_option(option),
+                self.elapsed,
+            );
         }
         fb.draw_text(72, 316, "ENTREE OU CLIC : RETENIR UNE HYPOTHESE", DIM);
     }
@@ -341,7 +386,17 @@ impl MemoryGame {
         for (index, rune) in draft.iter().copied().enumerate() {
             let x = 75 + index as i32 * 65;
             fb.fill_rect(x, 273, 55, 51, STONE);
-            fb.draw_rect(x, 273, 55, 51, if self.archive.slot() == index { SPIRIT } else { EDGE });
+            fb.draw_rect(
+                x,
+                273,
+                55,
+                51,
+                if self.archive.slot() == index {
+                    SPIRIT
+                } else {
+                    EDGE
+                },
+            );
             if rune == EMPTY_RUNE {
                 fb.draw_line(x + 12, 300, x + 42, 300, EDGE);
             } else {
@@ -385,9 +440,7 @@ impl MemoryGame {
 impl Game for MemoryGame {
     fn update(&mut self, frame: &mut Frame<'_>) -> GameResult {
         self.sounds.ensure_ambience(frame.audio);
-        if frame.input.key(Key::Escape).pressed()
-            && self.archive.page() == Page::Hall
-            && !self.help
+        if frame.input.key(Key::Escape).pressed() && self.archive.page() == Page::Hall && !self.help
         {
             return GameResult::Exit;
         }
@@ -442,10 +495,25 @@ fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
     let visible = if msg.len() > 66 { &msg[..66] } else { msg };
     fb.draw_text(22, 335, visible, IVORY);
     match page {
-        Page::Hall => fb.draw_text(21, 349, "H:AIDE  TAB:NAVIGUER  ENTREE:OBSERVER  S:SCELLER", DIM),
+        Page::Hall => fb.draw_text(
+            21,
+            349,
+            "H:AIDE  TAB:NAVIGUER  ENTREE:OBSERVER  S:SCELLER",
+            DIM,
+        ),
         Page::Clip(_) => fb.draw_text(21, 349, "< >:AUTRE ARCHIVE  ENTREE:RETOUR  H:AIDE", DIM),
-        Page::Witness => fb.draw_text(21, 349, "FLECHES:SCENE  ENTREE:CONSERVER  ECHAP:RETOUR", DIM),
-        Page::Restore => fb.draw_text(21, 349, "FLECHES:SIGNE / CASE  ESPACE:EFFACER  ENTREE:RETOUR", DIM),
+        Page::Witness => fb.draw_text(
+            21,
+            349,
+            "FLECHES:SCENE  ENTREE:CONSERVER  ECHAP:RETOUR",
+            DIM,
+        ),
+        Page::Restore => fb.draw_text(
+            21,
+            349,
+            "FLECHES:SIGNE / CASE  ESPACE:EFFACER  ENTREE:RETOUR",
+            DIM,
+        ),
         Page::Recovered => fb.draw_text(21, 349, "FIN DE CETTE EXPERIENCE. R:RECOMMENCER.", DIM),
     }
 }
@@ -455,38 +523,131 @@ fn draw_plaque(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32) {
     fb.draw_rect(x, y, w, h, EDGE);
     fb.draw_rect(x + 4, y + 4, w - 8, h - 8, DUST);
     fb.draw_line(x + 14, y + 16, x + 35, y + 16, GOLD);
-    fb.draw_line(x + w as i32 - 39, y + h as i32 - 17, x + w as i32 - 17, y + h as i32 - 17, GOLD);
+    fb.draw_line(
+        x + w as i32 - 39,
+        y + h as i32 - 17,
+        x + w as i32 - 17,
+        y + h as i32 - 17,
+        GOLD,
+    );
 }
 
 fn draw_button(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32, label: &str, focus: bool) {
     fb.fill_rect(x, y, w, h, if focus { STONE } else { DEEP });
     fb.draw_rect(x, y, w, h, if focus { SPIRIT } else { GOLD });
     let (tx, ty) = Framebuffer::text_size(label, 1);
-    fb.draw_text(x + (w as i32 - tx as i32) / 2, y + (h as i32 - ty as i32) / 2, label, IVORY);
+    fb.draw_text(
+        x + (w as i32 - tx as i32) / 2,
+        y + (h as i32 - ty as i32) / 2,
+        label,
+        IVORY,
+    );
 }
 
 // All runes follow a shared six-column etching style; none is a plain polygon.
 fn draw_rune(fb: &mut Framebuffer, rune: u8, x: i32, y: i32, scale: i32, color: Pixel) {
-    const A: &[(i32,i32,i32,i32)] = &[(1,13,4,3),(4,3,8,1),(8,1,12,6),(12,6,8,9),(8,9,13,14),(3,8,10,8)];
-    const B: &[(i32,i32,i32,i32)] = &[(2,2,6,6),(6,6,11,0),(6,6,7,14),(7,14,13,11),(1,12,7,10),(2,2,1,7)];
-    const C: &[(i32,i32,i32,i32)] = &[(1,2,13,8),(13,8,5,13),(5,13,2,9),(2,9,8,4),(8,4,12,1),(5,13,12,14)];
-    const D: &[(i32,i32,i32,i32)] = &[(7,0,7,14),(3,4,7,2),(7,2,12,5),(2,10,7,12),(7,12,13,9),(12,5,11,9)];
-    const E: &[(i32,i32,i32,i32)] = &[(4,0,10,2),(10,2,9,8),(9,8,13,13),(4,0,2,7),(2,7,7,14),(7,14,13,13),(4,9,10,9)];
-    const F: &[(i32,i32,i32,i32)] = &[(7,0,12,5),(12,5,9,11),(9,11,3,13),(3,13,1,8),(1,8,5,5),(5,5,10,7),(10,7,6,13)];
-    let strokes = match rune {0=>A,1=>B,2=>C,3=>D,4=>E,_=>F};
-    for &(x1,y1,x2,y2) in strokes {
-        fb.draw_line(x + x1 * scale, y + y1 * scale, x + x2 * scale, y + y2 * scale, color);
+    const A: &[(i32, i32, i32, i32)] = &[
+        (1, 13, 4, 3),
+        (4, 3, 8, 1),
+        (8, 1, 12, 6),
+        (12, 6, 8, 9),
+        (8, 9, 13, 14),
+        (3, 8, 10, 8),
+    ];
+    const B: &[(i32, i32, i32, i32)] = &[
+        (2, 2, 6, 6),
+        (6, 6, 11, 0),
+        (6, 6, 7, 14),
+        (7, 14, 13, 11),
+        (1, 12, 7, 10),
+        (2, 2, 1, 7),
+    ];
+    const C: &[(i32, i32, i32, i32)] = &[
+        (1, 2, 13, 8),
+        (13, 8, 5, 13),
+        (5, 13, 2, 9),
+        (2, 9, 8, 4),
+        (8, 4, 12, 1),
+        (5, 13, 12, 14),
+    ];
+    const D: &[(i32, i32, i32, i32)] = &[
+        (7, 0, 7, 14),
+        (3, 4, 7, 2),
+        (7, 2, 12, 5),
+        (2, 10, 7, 12),
+        (7, 12, 13, 9),
+        (12, 5, 11, 9),
+    ];
+    const E: &[(i32, i32, i32, i32)] = &[
+        (4, 0, 10, 2),
+        (10, 2, 9, 8),
+        (9, 8, 13, 13),
+        (4, 0, 2, 7),
+        (2, 7, 7, 14),
+        (7, 14, 13, 13),
+        (4, 9, 10, 9),
+    ];
+    const F: &[(i32, i32, i32, i32)] = &[
+        (7, 0, 12, 5),
+        (12, 5, 9, 11),
+        (9, 11, 3, 13),
+        (3, 13, 1, 8),
+        (1, 8, 5, 5),
+        (5, 5, 10, 7),
+        (10, 7, 6, 13),
+    ];
+    let strokes = match rune {
+        0 => A,
+        1 => B,
+        2 => C,
+        3 => D,
+        4 => E,
+        _ => F,
+    };
+    for &(x1, y1, x2, y2) in strokes {
+        fb.draw_line(
+            x + x1 * scale,
+            y + y1 * scale,
+            x + x2 * scale,
+            y + y2 * scale,
+            color,
+        );
     }
-    let (dx,dy) = match rune {0=>(1,2),1=>(12,14),2=>(0,11),3=>(13,1),4=>(1,13),_=>(12,1)};
-    fb.fill_rect(x + dx * scale, y + dy * scale, scale.max(1) as u32, scale.max(1) as u32, color);
+    let (dx, dy) = match rune {
+        0 => (1, 2),
+        1 => (12, 14),
+        2 => (0, 11),
+        3 => (13, 1),
+        4 => (1, 13),
+        _ => (12, 1),
+    };
+    fb.fill_rect(
+        x + dx * scale,
+        y + dy * scale,
+        scale.max(1) as u32,
+        scale.max(1) as u32,
+        color,
+    );
 }
 
-fn draw_sentence(fb: &mut Framebuffer, sentence: &[u8; 3], x: i32, y: i32, scale: i32, color: Pixel) {
+fn draw_sentence(
+    fb: &mut Framebuffer,
+    sentence: &[u8; 3],
+    x: i32,
+    y: i32,
+    scale: i32,
+    color: Pixel,
+) {
     for (index, rune) in sentence.iter().copied().enumerate() {
         draw_rune(fb, rune, x + index as i32 * 31 * scale, y, scale, color);
         if index < 2 {
-            fb.draw_line(x + (index as i32 * 31 + 21) * scale, y + 16 * scale,
-                         x + (index as i32 * 31 + 25) * scale, y + 16 * scale, DUST);
+            fb.draw_line(
+                x + (index as i32 * 31 + 21) * scale,
+                y + 16 * scale,
+                x + (index as i32 * 31 + 25) * scale,
+                y + 16 * scale,
+                DUST,
+            );
         }
     }
 }
@@ -494,8 +655,12 @@ fn draw_sentence(fb: &mut Framebuffer, sentence: &[u8; 3], x: i32, y: i32, scale
 type Scene = (u8, u8, u8); // verb, agent, patient
 fn event_for_clip(i: usize) -> Scene {
     const EVENTS: [Scene; 6] = [
-        (0, 3, 4), (0, 4, 5), (1, 3, 5),
-        (1, 4, 5), (2, 3, 4), (2, 4, 3),
+        (0, 3, 4),
+        (0, 4, 5),
+        (1, 3, 5),
+        (1, 4, 5),
+        (2, 3, 4),
+        (2, 4, 3),
     ];
     EVENTS[i]
 }
@@ -524,64 +689,212 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     // Action direction is from actor to patient regardless of horizontal iconography.
     draw_entity(fb, ax, base, agent, unit, GOLD, false);
     if verb == 2 {
-        fb.draw_line(ax + 7 * unit, base - 12 * unit, px - 6 * unit, base - 16 * unit, SPIRIT);
-        draw_entity(fb, px + movement, base - 6 * unit, patient, unit, IVORY, false);
-        fb.draw_line(px - 12 * unit, base - 5 * unit, px + 12 * unit, base - 5 * unit, SPIRIT);
+        fb.draw_line(
+            ax + 7 * unit,
+            base - 12 * unit,
+            px - 6 * unit,
+            base - 16 * unit,
+            SPIRIT,
+        );
+        draw_entity(
+            fb,
+            px + movement,
+            base - 6 * unit,
+            patient,
+            unit,
+            IVORY,
+            false,
+        );
+        fb.draw_line(
+            px - 12 * unit,
+            base - 5 * unit,
+            px + 12 * unit,
+            base - 5 * unit,
+            SPIRIT,
+        );
         fb.draw_line(px - 10 * unit, base + 1, px + 10 * unit, base + 1, RUST);
     } else {
-        draw_entity(fb, px, base, patient, unit, if verb == 1 { BLAZE } else { IVORY }, verb == 1);
+        draw_entity(
+            fb,
+            px,
+            base,
+            patient,
+            unit,
+            if verb == 1 { BLAZE } else { IVORY },
+            verb == 1,
+        );
     }
     match verb {
         0 => {
             // A barrier consistently surrounds the patient, never the actor.
             fb.draw_circle(px, base - 13 * unit, (21 * unit) as u32, SPIRIT);
-            fb.draw_line(px - 21 * unit, base - 13 * unit, px - 13 * unit, base - 24 * unit, SPIRIT);
-            fb.draw_line(px + 21 * unit, base - 13 * unit, px + 13 * unit, base - 24 * unit, SPIRIT);
-            fb.draw_line(ax + 9 * unit, base - 20 * unit, px - 20 * unit, base - 20 * unit, GOLD);
+            fb.draw_line(
+                px - 21 * unit,
+                base - 13 * unit,
+                px - 13 * unit,
+                base - 24 * unit,
+                SPIRIT,
+            );
+            fb.draw_line(
+                px + 21 * unit,
+                base - 13 * unit,
+                px + 13 * unit,
+                base - 24 * unit,
+                SPIRIT,
+            );
+            fb.draw_line(
+                ax + 9 * unit,
+                base - 20 * unit,
+                px - 20 * unit,
+                base - 20 * unit,
+                GOLD,
+            );
         }
         1 => {
             // Pulse travels from actor to a patient coming back into light.
-            fb.draw_line(ax + 11 * unit, base - 24 * unit, px - 12 * unit, base - 24 * unit, BLAZE);
-            for (dx,dy) in [(-17,-27),(14,-29),(-14,-9),(17,-11)] {
-                fb.draw_line(px + dx*unit, base + dy*unit,
-                    px + (dx + (if dx < 0 {-4} else {4}))*unit, base + (dy-2)*unit, BLAZE);
+            fb.draw_line(
+                ax + 11 * unit,
+                base - 24 * unit,
+                px - 12 * unit,
+                base - 24 * unit,
+                BLAZE,
+            );
+            for (dx, dy) in [(-17, -27), (14, -29), (-14, -9), (17, -11)] {
+                fb.draw_line(
+                    px + dx * unit,
+                    base + dy * unit,
+                    px + (dx + (if dx < 0 { -4 } else { 4 })) * unit,
+                    base + (dy - 2) * unit,
+                    BLAZE,
+                );
             }
         }
         _ => {}
     }
 }
 
-fn draw_entity(fb: &mut Framebuffer, x: i32, y: i32, kind: u8, scale: i32, color: Pixel, faded: bool) {
+fn draw_entity(
+    fb: &mut Framebuffer,
+    x: i32,
+    y: i32,
+    kind: u8,
+    scale: i32,
+    color: Pixel,
+    faded: bool,
+) {
     let color = if faded { RUST } else { color };
     match kind {
         3 => {
             // Tall watcher with staff, mantle, and a two-pronged crown.
             fb.fill_circle(x, y - 30 * scale, (5 * scale) as u32, color);
-            fb.draw_line(x - 10 * scale, y - 38 * scale, x - 7 * scale, y - 34 * scale, GOLD);
-            fb.draw_line(x + 10 * scale, y - 38 * scale, x + 7 * scale, y - 34 * scale, GOLD);
-            fb.fill_rect(x - 5 * scale, y - 23 * scale, (10 * scale) as u32, (18 * scale) as u32, color);
-            fb.draw_line(x - 10 * scale, y - 20 * scale, x - 13 * scale, y - 7 * scale, color);
-            fb.draw_line(x + 10 * scale, y - 20 * scale, x + 9 * scale, y - 7 * scale, color);
+            fb.draw_line(
+                x - 10 * scale,
+                y - 38 * scale,
+                x - 7 * scale,
+                y - 34 * scale,
+                GOLD,
+            );
+            fb.draw_line(
+                x + 10 * scale,
+                y - 38 * scale,
+                x + 7 * scale,
+                y - 34 * scale,
+                GOLD,
+            );
+            fb.fill_rect(
+                x - 5 * scale,
+                y - 23 * scale,
+                (10 * scale) as u32,
+                (18 * scale) as u32,
+                color,
+            );
+            fb.draw_line(
+                x - 10 * scale,
+                y - 20 * scale,
+                x - 13 * scale,
+                y - 7 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 10 * scale,
+                y - 20 * scale,
+                x + 9 * scale,
+                y - 7 * scale,
+                color,
+            );
             fb.draw_line(x - 2 * scale, y - 6 * scale, x - 7 * scale, y, color);
             fb.draw_line(x + 2 * scale, y - 6 * scale, x + 6 * scale, y, color);
-            fb.draw_line(x + 13 * scale, y - 28 * scale, x + 13 * scale, y + 1 * scale, GOLD);
+            fb.draw_line(
+                x + 13 * scale,
+                y - 28 * scale,
+                x + 13 * scale,
+                y + 1 * scale,
+                GOLD,
+            );
         }
         4 => {
             // Distinct short, hooded silhouette, open palm.
             fb.fill_circle(x, y - 19 * scale, (5 * scale) as u32, color);
             fb.draw_line(x - 5 * scale, y - 21 * scale, x, y - 29 * scale, GOLD);
             fb.draw_line(x, y - 29 * scale, x + 7 * scale, y - 20 * scale, GOLD);
-            fb.fill_rect(x - 4 * scale, y - 13 * scale, (8 * scale) as u32, (12 * scale) as u32, color);
-            fb.draw_line(x - 4 * scale, y - 11 * scale, x - 12 * scale, y - 5 * scale, color);
-            fb.draw_line(x + 4 * scale, y - 11 * scale, x + 11 * scale, y - 9 * scale, color);
-            fb.draw_line(x - 3 * scale, y - 1 * scale, x - 7 * scale, y + 3 * scale, color);
-            fb.draw_line(x + 3 * scale, y - 1 * scale, x + 7 * scale, y + 3 * scale, color);
+            fb.fill_rect(
+                x - 4 * scale,
+                y - 13 * scale,
+                (8 * scale) as u32,
+                (12 * scale) as u32,
+                color,
+            );
+            fb.draw_line(
+                x - 4 * scale,
+                y - 11 * scale,
+                x - 12 * scale,
+                y - 5 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 4 * scale,
+                y - 11 * scale,
+                x + 11 * scale,
+                y - 9 * scale,
+                color,
+            );
+            fb.draw_line(
+                x - 3 * scale,
+                y - 1 * scale,
+                x - 7 * scale,
+                y + 3 * scale,
+                color,
+            );
+            fb.draw_line(
+                x + 3 * scale,
+                y - 1 * scale,
+                x + 7 * scale,
+                y + 3 * scale,
+                color,
+            );
         }
         _ => {
             // Ember on its independent pedestal.
-            fb.fill_rect(x - 11 * scale, y - 6 * scale, (22 * scale) as u32, (7 * scale) as u32, STONE);
-            fb.draw_line(x - 13 * scale, y - 6 * scale, x + 13 * scale, y - 6 * scale, GOLD);
-            fb.fill_circle(x, y - 21 * scale, (7 * scale) as u32, if faded { RUST } else { BLAZE });
+            fb.fill_rect(
+                x - 11 * scale,
+                y - 6 * scale,
+                (22 * scale) as u32,
+                (7 * scale) as u32,
+                STONE,
+            );
+            fb.draw_line(
+                x - 13 * scale,
+                y - 6 * scale,
+                x + 13 * scale,
+                y - 6 * scale,
+                GOLD,
+            );
+            fb.fill_circle(
+                x,
+                y - 21 * scale,
+                (7 * scale) as u32,
+                if faded { RUST } else { BLAZE },
+            );
             fb.draw_circle(x, y - 21 * scale, (11 * scale) as u32, GOLD);
             fb.draw_line(x, y - 37 * scale, x + 3 * scale, y - 29 * scale, BLAZE);
         }
@@ -605,8 +918,18 @@ fn draw_monument(fb: &mut Framebuffer, x: i32, y: i32, time: f32, revealed: bool
         fb.draw_line(x + 19, y + 108, x + 45, y + 82, RUST);
         fb.draw_line(x + 16, y + 110, x + 44, y + 113, DUST);
     }
-    let shimmer = if (time * 2.0) as i32 % 2 == 0 { GOLD } else { EDGE };
-    fb.draw_line(x + 10, y + h as i32 - 8, x + w as i32 - 10, y + h as i32 - 8, shimmer);
+    let shimmer = if (time * 2.0) as i32 % 2 == 0 {
+        GOLD
+    } else {
+        EDGE
+    };
+    fb.draw_line(
+        x + 10,
+        y + h as i32 - 8,
+        x + w as i32 - 10,
+        y + h as i32 - 8,
+        shimmer,
+    );
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -631,10 +954,10 @@ mod tests {
     #[test]
     fn clickable_archive_regions_are_non_overlapping() {
         for i in 0..6 {
-            let (x,y) = card_pos(i);
+            let (x, y) = card_pos(i);
             assert!(hit(x + 1, y + 1, x, y, CARD_W, CARD_H));
             for j in i + 1..6 {
-                let (nx,ny) = card_pos(j);
+                let (nx, ny) = card_pos(j);
                 assert!(!hit(nx + 1, ny + 1, x, y, CARD_W, CARD_H));
             }
         }
