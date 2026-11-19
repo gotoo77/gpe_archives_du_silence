@@ -1,81 +1,90 @@
 # Les Archives du Silence
 
-A GPE-powered archaeological puzzle game where knowledge,
-deduction and a forgotten language unlock the world.
+Jeu d'exploration et de deduction dans des archives d'une civilisation disparue.
+Comprendre plutot que deviner. Decouvrir plutot qu'accumuler.
 
-## Vision
+## Version experimentale : Les Remanences (prototype 002)
 
-Comprendre plutôt que deviner.
-Découvrir plutôt qu'accumuler.
-Apprendre pour agir sur le monde.
+Cette branche contient une **experience de reconstruction de souvenirs**. Elle
+remplace l'enigme des deux pupitres du prototype 001, qui a echoue au premier
+test de gameplay. Ce prototype 002 n'est **pas valide humainement** et ne doit
+pas etre presente comme le gameplay definitif du jeu.
 
-## Etat du projet
+Le prototype conserve l'API native GPE epinglee et l'ambiance audio procedurale.
 
-**Prototype 001 natif Rust : beta visuelle et sonore, non validee sur le plan ludique.**
+### Garder la surprise
 
-Aucune autre fonctionnalite de gameplay n'est annoncee comme implementee.
+Le proprietaire du projet souhaite jouer **a l'aveugle**.
+Ne pas ouvrir `src/lib.rs`, `src/main.rs`, les tests ou la documentation
+de conception avant l'essai : ils contiennent les solutions.
 
-## Joueur beta : conserver la surprise
+Aucun dictionnaire de glyphes n'est donne ici.
 
-Si tu veux decouvrir l'enigme sans spoilers, **ne lis pas les fichiers
-`src/lib.rs`, `docs/prototypes/`, `docs/reviews/` et les tests** avant
-d'avoir joue. Le code du jeu et la documentation de conception contiennent
-inevitablement des informations sur les solutions.
+### Prerequis
 
-### Lancer la version native
+- Rust 1.97.1 (cf. `rust-toolchain.toml`)
+- Outils systeme requis par GPE pour le rendu et le son
+- Sur Windows, toolchain Rust cible MSVC correctement installee
 
-Pre-requis : Rust 1.97.1, environnement natif compatible avec GPE et
-dependances systeme requises par le moteur.
+### Lancement natif
 
-```bash
+```powershell
 cargo generate-lockfile
 cargo run --locked
 ```
 
-Commandes dans le jeu :
+Le `Cargo.lock` n'est pas encore commite sur cette branche de developpement :
+la compilation fonctionne apres resolution locale, mais elle n'est pas
+pleinement reproductible. Ne pas annoncer la validation du lockfile.
 
-- Fleches gauche/droite : selectionner un emplacement de glyphe.
-- Fleches haut/bas : faire defiler les glyphes.
-- Entree : tenter une combinaison.
-- H : afficher ou masquer l'aide.
-- Tab : changer de pupitre, si accessible.
-- Cliquer sur le pupitre numerote directement dans la salle : le selectionner.
-- Cliquer sur une case du HUD : la selectionner ; un second clic fait defiler le glyphe.
-- Cliquer sur ENVOYER : tenter la combinaison sur le pupitre actif.
+### Controles de jeu
 
-Le pupitre actif est maintenant **surligne directement dans la salle**, ainsi que
-l'appareil auquel il est relie. La saisie des deux glyphes reste distincte pour
-chacun des deux pupitres. Aucun sens des glyphes n'est revele par l'interface.
-- R : recommencer.
-- Echap : quitter.
+- **Souris** : cliquer sur une archive pour examiner sa projection, sur une
+  scene pour choisir son interpretation, ou sur une rune pour ecrire.
+- **Tab et fleches** : deplacer la selection selon l'ecran actif.
+- **Entree** : visiter, choisir ou revenir selon le contexte.
+- **S** depuis la salle : confronter les deux reconstructions. Le jeu ne donne
+  jamais de score partiel ni de traduction automatique.
+- **Espace** pendant l'ecriture : effacer le signe selectionne.
+- **Echap** : revenir a la salle, quitter depuis la salle.
+- **H** : afficher ou masquer l'aide.
+- **R** : recommencer.
 
-L'affichage utilise un framebuffer 640x360 presente dans une fenetre 1280x720.
-Le bandeau de controles reste compact et l'aide est masquee par defaut.
-Une ambiance grave et plusieurs effets sonores proceduraux sont generes par Rust
-et diffuses via les bus audio GPE, sans assets externes.
-Si le moteur ne peut pas initialiser la sortie audio, le jeu le signale.
+**Observation importante :** le fragment lu et l'inscription reconstruite sont
+deux taches distinctes. Une reponse incorrecte ne dit pas quel element est faux.
 
-Le jeu **ne demande aucune connaissance externe**. Observe, essaie et
-raisonne librement. Si tu bloques, note simplement ce qui t'a intrigue.
+### Ce que le premier test doit permettre de distinguer
 
-### Validation du developpement
+- Trouver le chemin par essais successifs.
+- Expliquer une regle sans que le jeu la fournisse.
+- Reutiliser cette regle dans une situation nouvelle.
+- Avoir ou non une decouverte narrative.
+- Comprendre l'interface sans intervention du developpeur.
+
+Une capture et un ressenti sur la lisibilite font partie de la validation :
+les tests automatises ne prouvent pas qu'un dessin raconte une action.
+
+### Verifications Rust
 
 ```bash
 cargo fmt --all -- --check
 cargo check --locked --all-targets
 cargo test --locked --all-targets
 cargo clippy --locked --all-targets --all-features -- -D warnings
+git diff --check
 ```
 
-Le `Cargo.lock` n'est pas encore versionne ; une resolution provisoire est generee
-avant les controles. La generation puis le commit du lockfile sont requis avant
-de considerer la beta reproductible.
+Aucun resultat de CI n'est presume : verifier le statut du dernier SHA sur
+GitHub Actions. La validation Win11 native n'est pas couverte par la CI Linux.
 
-Le prototype utilise l'API publique du moteur GPE sur une revision Git
-pointee dans `Cargo.toml`. Aucun changement du moteur n'est requis
-par la conception du prototype.
+## Scope
 
-## Phase suivante
+Une salle, six fragments observables, un texte a interpreter, une scene a
+inscrire, une restitution finale. Pas de monde ouvert, de langue complete,
+de progression numerique, de penalite, de generation, de service IA ni de
+refactoring du moteur GPE.
 
-Effectuer un premier test a l'aveugle, consigner les observations, puis
-decider de la suite (GO / REVISE / NO-GO). **Aucun playtest n'a encore ete realise.**
+### Historique
+
+- Prototype 001 : **REVISE/NO-GO ludique**, [issue #5](https://github.com/gotoo77/gpe_archives_du_silence/issues/5)
+- Prototype 002 : candidature experimentale, [issue #7](https://github.com/gotoo77/gpe_archives_du_silence/issues/7)
