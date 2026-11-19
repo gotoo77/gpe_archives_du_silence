@@ -280,7 +280,7 @@ impl MemoryGame {
     }
 
     fn draw_hall(&self, fb: &mut Framebuffer) {
-        for index in 0..6 {
+        for (index, clue) in CLUES.iter().enumerate() {
             let (x, y) = card_pos(index);
             let focused = self.archive.focus() == index;
             fb.fill_rect(x, y, CARD_W as u32, CARD_H as u32, DEEP);
@@ -301,7 +301,7 @@ impl MemoryGame {
                 self.elapsed,
             );
             fb.fill_rect(x + 5, y + 70, 117, 23, INK);
-            draw_sentence(fb, &CLUES[index], x + 22, y + 73, 1, IVORY);
+            draw_sentence(fb, clue, x + 22, y + 73, 1, IVORY);
             if self.archive.watched(index) {
                 fb.draw_text(x + 5, y + 5, "*", SPIRIT);
             }
@@ -828,7 +828,7 @@ fn draw_entity(
                 x + 13 * scale,
                 y - 28 * scale,
                 x + 13 * scale,
-                y + 1 * scale,
+                y + scale,
                 GOLD,
             );
         }
@@ -860,14 +860,14 @@ fn draw_entity(
             );
             fb.draw_line(
                 x - 3 * scale,
-                y - 1 * scale,
+                y - scale,
                 x - 7 * scale,
                 y + 3 * scale,
                 color,
             );
             fb.draw_line(
                 x + 3 * scale,
-                y - 1 * scale,
+                y - scale,
                 x + 7 * scale,
                 y + 3 * scale,
                 color,
