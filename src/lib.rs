@@ -108,7 +108,10 @@ mod tests {
     #[test]
     fn inaccessible_console_cannot_be_activated() {
         let mut world = World::default();
-        assert_eq!(world.submit(Console::Second, [0, 4]), Reaction::Inaccessible);
+        assert_eq!(
+            world.submit(Console::Second, [0, 4]),
+            Reaction::Inaccessible
+        );
         assert!(!world.second_active());
     }
 
