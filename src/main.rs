@@ -124,7 +124,7 @@ impl MemoryGame {
                     self.activate_hall(6, audio);
                 } else if hit(x, y, 542, 229, 74, 35) {
                     self.activate_hall(7, audio);
-                } else if hit(x, y, 502, 289, 116, 30) {
+                } else if hit(x, y, 502, 294, 116, 25) {
                     self.seal(audio);
                 }
             }
@@ -136,12 +136,12 @@ impl MemoryGame {
             }
             Page::Witness => {
                 for option in 0..3 {
-                    if hit(x, y, 70, 127 + option as i32 * 61, 500, 55) {
+                    if hit(x, y, 70, 119 + option as i32 * 58, 500, 55) {
                         self.pick_witness(option, audio);
                         return;
                     }
                 }
-                if hit(x, y, 500, 298, 112, 30) {
+                if hit(x, y, 500, 294, 112, 26) {
                     self.archive.back();
                 }
             }
@@ -309,9 +309,9 @@ impl MemoryGame {
         draw_monument(fb, 467, 87, self.elapsed, false);
         draw_button(fb, 464, 229, 74, 35, "LIRE", self.archive.focus() == 6);
         draw_button(fb, 542, 229, 74, 35, "ECRIRE", self.archive.focus() == 7);
-        fb.draw_text(475, 271, "MEMOIRE BRISEE", DIM);
-        fb.draw_text(469, 283, "DEUX TRACES", DIM);
-        draw_button(fb, 502, 289, 116, 30, "SCELLER [S]", false);
+        fb.draw_text(475, 270, "MEMOIRE BRISEE", DIM);
+        fb.draw_text(475, 281, "DEUX TRACES", DIM);
+        draw_button(fb, 502, 294, 116, 25, "SCELLER [S]", false);
     }
 
     fn draw_clip(&self, fb: &mut Framebuffer, index: usize) {
@@ -335,7 +335,7 @@ impl MemoryGame {
         draw_scene(fb, 49, 143, 383, 135, event_for_clip(index), self.elapsed);
         fb.draw_text(478, 90, "TRACE INSCRITE", DIM);
         fb.draw_line(477, 105, 612, 105, EDGE);
-        draw_sentence(fb, &CLUES[index], 480, 124, 2, GOLD);
+        draw_inscription(fb, &CLUES[index], 482, 126, GOLD);
         fb.draw_text(479, 208, "COMPARER LES", IVORY);
         fb.draw_text(479, 221, "MEMOIRES.", IVORY);
         fb.draw_text(479, 239, "< > : FRAGMENTS", DIM);
@@ -348,7 +348,7 @@ impl MemoryGame {
         fb.draw_text(42, 106, "QUEL EVENEMENT CE TEXTE DECRIT-IL ?", DIM);
         draw_sentence(fb, &archives_du_silence::WITNESS, 457, 75, 1, GOLD);
         for option in 0..3 {
-            let y = 127 + option as i32 * 61;
+            let y = 119 + option as i32 * 58;
             let active = self.testimony_focus == option;
             fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
             fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
@@ -373,7 +373,8 @@ impl MemoryGame {
                 self.elapsed,
             );
         }
-        fb.draw_text(72, 316, "ENTREE OU CLIC : RETENIR UNE HYPOTHESE", DIM);
+        fb.draw_text(72, 305, "CHOISIR UNE INTERPRETATION", DIM);
+        draw_button(fb, 500, 294, 112, 26, "RETOUR", false);
     }
 
     fn draw_restore(&self, fb: &mut Framebuffer) {
@@ -468,8 +469,9 @@ fn draw_room(fb: &mut Framebuffer, elapsed: f32) {
     fb.clear(INK);
     fb.fill_rect(0, 0, WIDTH, 52, DEEP);
     fb.draw_line(0, 52, 639, 52, GOLD);
-    fb.draw_text_scaled(24, 13, "LES ARCHIVES DU SILENCE", 2, IVORY);
-    fb.draw_text(539, 16, "FRAGMENT 002", GOLD);
+    fb.draw_text(23, 15, "LES ARCHIVES DU SILENCE", IVORY);
+    fb.draw_text(23, 30, "LES REMANENCES", GOLD);
+    fb.draw_text(539, 20, "FRAGMENT 002", GOLD);
     fb.fill_rect(14, 60, 612, 259, STONE);
     for i in 0..19 {
         let x = 22 + i * 31;
@@ -652,6 +654,15 @@ fn draw_sentence(
     }
 }
 
+// The three engraved runes fit inside the evidence panel.
+fn draw_inscription(fb: &mut Framebuffer, sentence: &[u8; 3], x: i32, y: i32, color: Pixel) {
+    for (index, rune) in sentence.iter().copied().enumerate() {
+        let xx = x + index as i32 * 43;
+        draw_rune(fb, rune, xx, y, 2, color);
+        fb.draw_line(xx - 3, y + 37, xx + 30, y + 37, DUST);
+    }
+}
+
 type Scene = (u8, u8, u8); // verb, agent, patient
 fn event_for_clip(i: usize) -> Scene {
     const EVENTS: [Scene; 6] = [
@@ -676,12 +687,33 @@ fn scene_for_option(i: usize) -> Scene {
 fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene, time: f32) {
     let (verb, agent, patient) = scene;
     fb.fill_rect(x, y, w as u32, h as u32, INK);
-    // Ruined arch fragments and distant horizontal depth planes.
-    fb.draw_line(x + 4, y + h - 9, x + w - 5, y + h - 9, EDGE);
-    fb.draw_line(x + 4, y + 5, x + 4, y + h - 9, DUST);
-    fb.draw_line(x + w - 5, y + 5, x + w - 5, y + h - 9, DUST);
+    // Ruined vault and receding arches, without adding linguistic clues.
+    let back = Pixel::rgb(15, 29, 39);
+    fb.fill_rect(x + 5, y + 4, (w - 10) as u32, (h - 14) as u32, back);
+    let floor = y + h - 10;
+    fb.fill_rect(x + 5, floor, (w - 10) as u32, 6, STONE);
+    for column in 0..3 {
+        let cx = x + 10 + column * (w - 20) / 2;
+        fb.fill_rect(cx, y + 10, 3, (h - 21) as u32, Pixel::rgb(30, 43, 49));
+        fb.draw_line(cx - 5, y + 10, cx + 8, y + 10, EDGE);
+        fb.draw_line(cx - 5, floor - 2, cx + 8, floor - 2, DUST);
+    }
+    for layer in 0..3 {
+        let inset = 9 + layer * 4;
+        let tint = if layer == 0 { EDGE } else { DUST };
+        fb.draw_line(x + inset, y + inset, x + w / 2, y + 4, tint);
+        fb.draw_line(x + w / 2, y + 4, x + w - inset, y + inset, tint);
+    }
+    for step in 0..7 {
+        let xx = x + 14 + step * (w - 29) / 7;
+        fb.draw_line(xx, y + 18, xx + 4, y + 22, DUST);
+        fb.draw(xx + ((time * 2.0) as i32 % 3), y + 27, GOLD);
+    }
+    fb.draw_line(x + 5, floor, x + w - 6, floor, EDGE);
+    fb.draw_line(x + 5, y + 4, x + 5, floor, DUST);
+    fb.draw_line(x + w - 6, y + 4, x + w - 6, floor, DUST);
     let unit = if h >= 110 { 2 } else { 1 };
-    let base = y + h - 17;
+    let base = y + h - 12;
     let ax = x + w / 3;
     let px = x + w * 2 / 3;
     let phase = (time * 1.65).sin();
@@ -689,6 +721,8 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     // Action direction is from actor to patient regardless of horizontal iconography.
     draw_entity(fb, ax, base, agent, unit, GOLD, false);
     if verb == 2 {
+        // The compact memory tiles leave less headroom than the large projection.
+        let lift = if unit == 1 { 1 } else { 6 * unit };
         fb.draw_line(
             ax + 7 * unit,
             base - 12 * unit,
@@ -696,15 +730,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
             base - 16 * unit,
             SPIRIT,
         );
-        draw_entity(
-            fb,
-            px + movement,
-            base - 6 * unit,
-            patient,
-            unit,
-            IVORY,
-            false,
-        );
+        draw_entity(fb, px + movement, base - lift, patient, unit, IVORY, false);
         fb.draw_line(
             px - 12 * unit,
             base - 5 * unit,
@@ -777,6 +803,111 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     }
 }
 
+// Two original 17-pixel-wide costume silhouettes, not interchangeable stick figures.
+const WATCHER_SILHOUETTE: [&str; 27] = [
+    ".......g.g.......",
+    "......gbbg......",
+    ".....ggbbgg.....",
+    "......bbbb......",
+    ".....bffffb.....",
+    ".....bffffb.....",
+    "......bffb......",
+    ".....bggggb.....",
+    "...bbcccccbb..",
+    "...bcccccccccbs.",
+    "..sbclcccclccbss",
+    "...sclcccclccbs.",
+    "...scclcccclccbs",
+    "....blcccccccb..",
+    "....bclgglcccb..",
+    ".....bclllccb...",
+    "....bbclllccbb..",
+    "....bcllllcclb..",
+    "...bbcllllcclbb.",
+    "...bclllclllcbb.",
+    "...bblllllllcbb.",
+    ".....bllbbllb...",
+    ".....bllbbllb...",
+    "....bbb..bbb....",
+    "....bgg..ggb....",
+    "...bbb....bbb...",
+    "..bbbb....bbbb..",
+];
+const SCRIBE_SILHOUETTE: [&str; 25] = [
+    ".......gg........",
+    "......gbbg......",
+    ".....gbbbbg.....",
+    "....gbbbbbbg....",
+    "....bbffffbb....",
+    "....bbffffbb....",
+    ".....bbffbb.....",
+    ".....bggggb.....",
+    "....bbccccbb....",
+    "...bbccccccbb...",
+    "..bbclccccclbb..",
+    "..blclcccclclb..",
+    "..bllcllcllclb..",
+    "..bbcllcllccbb..",
+    "...bcllcllccb...",
+    "...bcllclllcb...",
+    "...bclllllccb...",
+    "...bclllllccb...",
+    "...bclllllccb...",
+    "..bbcllccclcbb..",
+    "..bcllcccccclb..",
+    "..bbbbbbbbbbbb..",
+    "....bll..llb....",
+    "...bbb....bbb...",
+    "..bbbb....bbbb..",
+];
+
+fn draw_costume(
+    fb: &mut Framebuffer,
+    x: i32,
+    ground: i32,
+    scale: i32,
+    rows: &[&str],
+    tone: Pixel,
+    faded: bool,
+) {
+    let top = ground - rows.len() as i32 * scale;
+    for (row_idx, row) in rows.iter().enumerate() {
+        let bytes = row.as_bytes();
+        let mut start = 0;
+        while start < bytes.len() {
+            let symbol = bytes[start];
+            let mut end = start + 1;
+            while end < bytes.len() && bytes[end] == symbol {
+                end += 1;
+            }
+            let pixel = match symbol {
+                b'b' => Some(INK),
+                b'c' => Some(if faded { DUST } else { Pixel::rgb(58, 78, 78) }),
+                b'l' => Some(if faded {
+                    RUST
+                } else {
+                    Pixel::rgb(129, 149, 135)
+                }),
+                b'f' => Some(if faded { RUST } else { tone }),
+                b'g' => Some(if faded { EDGE } else { GOLD }),
+                b'w' => Some(if faded { EDGE } else { IVORY }),
+                b's' => Some(DUST),
+                _ => None,
+            };
+            if let Some(color) = pixel {
+                fb.fill_rect(
+                    x + (start as i32 - 8) * scale,
+                    top + row_idx as i32 * scale,
+                    ((end - start) as i32 * scale) as u32,
+                    scale as u32,
+                    color,
+                );
+            }
+            start = end;
+        }
+    }
+}
+
 fn draw_entity(
     fb: &mut Framebuffer,
     x: i32,
@@ -786,121 +917,84 @@ fn draw_entity(
     color: Pixel,
     faded: bool,
 ) {
-    let color = if faded { RUST } else { color };
     match kind {
         3 => {
-            // Tall watcher with staff, mantle, and a two-pronged crown.
-            fb.fill_circle(x, y - 30 * scale, (5 * scale) as u32, color);
-            fb.draw_line(
-                x - 10 * scale,
-                y - 38 * scale,
-                x - 7 * scale,
-                y - 34 * scale,
-                GOLD,
-            );
-            fb.draw_line(
-                x + 10 * scale,
-                y - 38 * scale,
-                x + 7 * scale,
-                y - 34 * scale,
-                GOLD,
-            );
+            draw_costume(fb, x, y, scale, &WATCHER_SILHOUETTE, color, faded);
+            // Ritual staff belongs only to this figure, even at thumbnail scale.
             fb.fill_rect(
-                x - 5 * scale,
-                y - 23 * scale,
-                (10 * scale) as u32,
-                (18 * scale) as u32,
-                color,
+                x + 12 * scale,
+                y - 28 * scale,
+                (2 * scale) as u32,
+                (28 * scale) as u32,
+                RUST,
             );
             fb.draw_line(
-                x - 10 * scale,
-                y - 20 * scale,
-                x - 13 * scale,
-                y - 7 * scale,
-                color,
+                x + 13 * scale,
+                y - 29 * scale,
+                x + 13 * scale,
+                y - 34 * scale,
+                GOLD,
             );
             fb.draw_line(
                 x + 10 * scale,
-                y - 20 * scale,
-                x + 9 * scale,
-                y - 7 * scale,
-                color,
-            );
-            fb.draw_line(x - 2 * scale, y - 6 * scale, x - 7 * scale, y, color);
-            fb.draw_line(x + 2 * scale, y - 6 * scale, x + 6 * scale, y, color);
-            fb.draw_line(
-                x + 13 * scale,
-                y - 28 * scale,
-                x + 13 * scale,
-                y + scale,
+                y - 31 * scale,
+                x + 16 * scale,
+                y - 31 * scale,
                 GOLD,
             );
         }
         4 => {
-            // Distinct short, hooded silhouette, open palm.
-            fb.fill_circle(x, y - 19 * scale, (5 * scale) as u32, color);
-            fb.draw_line(x - 5 * scale, y - 21 * scale, x, y - 29 * scale, GOLD);
-            fb.draw_line(x, y - 29 * scale, x + 7 * scale, y - 20 * scale, GOLD);
-            fb.fill_rect(
-                x - 4 * scale,
-                y - 13 * scale,
-                (8 * scale) as u32,
-                (12 * scale) as u32,
-                color,
-            );
+            draw_costume(fb, x, y, scale, &SCRIBE_SILHOUETTE, color, faded);
+            // A short diagonal sash distinguishes the scribe from the crowned watcher.
             fb.draw_line(
-                x - 4 * scale,
-                y - 11 * scale,
-                x - 12 * scale,
-                y - 5 * scale,
-                color,
-            );
-            fb.draw_line(
-                x + 4 * scale,
-                y - 11 * scale,
-                x + 11 * scale,
-                y - 9 * scale,
-                color,
-            );
-            fb.draw_line(
-                x - 3 * scale,
-                y - scale,
-                x - 7 * scale,
-                y + 3 * scale,
-                color,
-            );
-            fb.draw_line(
+                x - 5 * scale,
+                y - 14 * scale,
                 x + 3 * scale,
-                y - scale,
-                x + 7 * scale,
-                y + 3 * scale,
-                color,
+                y - 9 * scale,
+                GOLD,
             );
         }
         _ => {
-            // Ember on its independent pedestal.
+            // The third referent is a suspended ember, not a humanoid.
+            let orb = if faded { RUST } else { BLAZE };
             fb.fill_rect(
-                x - 11 * scale,
+                x - 13 * scale,
+                y - 4 * scale,
+                (26 * scale) as u32,
+                (5 * scale) as u32,
+                INK,
+            );
+            fb.fill_rect(
+                x - 10 * scale,
                 y - 6 * scale,
-                (22 * scale) as u32,
-                (7 * scale) as u32,
+                (20 * scale) as u32,
+                (4 * scale) as u32,
                 STONE,
             );
             fb.draw_line(
                 x - 13 * scale,
-                y - 6 * scale,
+                y - 7 * scale,
                 x + 13 * scale,
-                y - 6 * scale,
+                y - 7 * scale,
                 GOLD,
             );
-            fb.fill_circle(
-                x,
-                y - 21 * scale,
-                (7 * scale) as u32,
-                if faded { RUST } else { BLAZE },
+            fb.fill_circle(x, y - 20 * scale, (9 * scale) as u32, orb);
+            fb.draw_circle(x, y - 20 * scale, (13 * scale) as u32, RUST);
+            fb.draw_circle(x, y - 20 * scale, (11 * scale) as u32, GOLD);
+            fb.fill_rect(
+                x - 3 * scale,
+                y - 26 * scale,
+                (4 * scale) as u32,
+                (3 * scale) as u32,
+                IVORY,
             );
-            fb.draw_circle(x, y - 21 * scale, (11 * scale) as u32, GOLD);
-            fb.draw_line(x, y - 37 * scale, x + 3 * scale, y - 29 * scale, BLAZE);
+            fb.draw_line(
+                x + 2 * scale,
+                y - 35 * scale,
+                x + 6 * scale,
+                y - 29 * scale,
+                GOLD,
+            );
         }
     }
 }
@@ -1006,6 +1100,53 @@ mod tests {
                 "each type of memory must animate"
             );
         }
+    }
+
+    #[test]
+    fn testimony_last_choice_is_clickable_and_return_does_not_select() {
+        let mut game = MemoryGame::new().expect("procedural audio bank");
+        let mut audio = NoopAudio::default();
+        game.archive.open_witness();
+        game.handle_click(551, 304, &mut audio);
+        assert_eq!(game.archive.page(), Page::Hall);
+        assert_eq!(game.archive.witness_scene(), None);
+
+        game.archive.open_witness();
+        game.handle_click(220, 264, &mut audio);
+        assert_eq!(game.archive.page(), Page::Hall);
+        assert_eq!(game.archive.witness_scene(), Some(2));
+    }
+
+    #[test]
+    fn projected_figures_stay_inside_scene_top_edge() {
+        let empty = Framebuffer::new(640, 360);
+        for scene in [(0, 3, 4), (1, 4, 5), (2, 3, 5)] {
+            let mut fb = Framebuffer::new(640, 360);
+            draw_scene(&mut fb, 40, 40, 405, 48, scene, 1.0);
+            assert!(
+                fb.as_rgba8()[..40 * 640 * 4] == empty.as_rgba8()[..40 * 640 * 4],
+                "scene art must not overflow the tile above"
+            );
+        }
+    }
+
+    #[test]
+    fn evidence_glyphs_fit_inside_memory_panel() {
+        let mut fb = Framebuffer::new(640, 360);
+        draw_inscription(&mut fb, &CLUES[0], 482, 126, GOLD);
+        let blank = Framebuffer::new(640, 360);
+        let rendered = fb.as_rgba8();
+        let untouched = blank.as_rgba8();
+        // All glyph pixels and underline strokes stop before the stone frame.
+        for row in 126..174 {
+            let start = (row * 640 + 618) * 4;
+            let end = ((row + 1) * 640) * 4;
+            assert_eq!(&rendered[start..end], &untouched[start..end]);
+        }
+        assert!(
+            rendered != untouched,
+            "the inscription must render actual rune pixels"
+        );
     }
 
     #[test]
