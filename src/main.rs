@@ -767,6 +767,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
                         px + dx * unit,
                         base + dy * unit,
                         px + (dx + (if dx < 0 { -4 } else { 4 })) * unit,
+                        base + (dy - 2) * unit,
                         BLAZE,
                     );
                 }
