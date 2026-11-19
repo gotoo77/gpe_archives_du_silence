@@ -889,7 +889,11 @@ fn draw_costume(
             let pixel = match symbol {
                 b'b' => Some(INK),
                 b'c' => Some(if faded { DUST } else { Pixel::rgb(58, 78, 78) }),
-                b'l' => Some(if faded { RUST } else { Pixel::rgb(129, 149, 135) }),
+                b'l' => Some(if faded {
+                    RUST
+                } else {
+                    Pixel::rgb(129, 149, 135)
+                }),
                 b'f' => Some(if faded { RUST } else { tone }),
                 b'g' => Some(if faded { EDGE } else { GOLD }),
                 b'w' => Some(if faded { EDGE } else { IVORY }),
@@ -923,26 +927,80 @@ fn draw_entity(
         3 => {
             draw_costume(fb, x, y, scale, &WATCHER_SILHOUETTE, color, faded);
             // Ritual staff belongs only to this figure, even at thumbnail scale.
-            fb.fill_rect(x + 12 * scale, y - 28 * scale, (2 * scale) as u32, (28 * scale) as u32, RUST);
-            fb.draw_line(x + 13 * scale, y - 29 * scale, x + 13 * scale, y - 34 * scale, GOLD);
-            fb.draw_line(x + 10 * scale, y - 31 * scale, x + 16 * scale, y - 31 * scale, GOLD);
+            fb.fill_rect(
+                x + 12 * scale,
+                y - 28 * scale,
+                (2 * scale) as u32,
+                (28 * scale) as u32,
+                RUST,
+            );
+            fb.draw_line(
+                x + 13 * scale,
+                y - 29 * scale,
+                x + 13 * scale,
+                y - 34 * scale,
+                GOLD,
+            );
+            fb.draw_line(
+                x + 10 * scale,
+                y - 31 * scale,
+                x + 16 * scale,
+                y - 31 * scale,
+                GOLD,
+            );
         }
         4 => {
             draw_costume(fb, x, y, scale, &SCRIBE_SILHOUETTE, color, faded);
             // A short diagonal sash distinguishes the scribe from the crowned watcher.
-            fb.draw_line(x - 5 * scale, y - 14 * scale, x + 3 * scale, y - 9 * scale, GOLD);
+            fb.draw_line(
+                x - 5 * scale,
+                y - 14 * scale,
+                x + 3 * scale,
+                y - 9 * scale,
+                GOLD,
+            );
         }
         _ => {
             // The third referent is a suspended ember, not a humanoid.
             let orb = if faded { RUST } else { BLAZE };
-            fb.fill_rect(x - 13 * scale, y - 4 * scale, (26 * scale) as u32, (5 * scale) as u32, INK);
-            fb.fill_rect(x - 10 * scale, y - 6 * scale, (20 * scale) as u32, (4 * scale) as u32, STONE);
-            fb.draw_line(x - 13 * scale, y - 7 * scale, x + 13 * scale, y - 7 * scale, GOLD);
+            fb.fill_rect(
+                x - 13 * scale,
+                y - 4 * scale,
+                (26 * scale) as u32,
+                (5 * scale) as u32,
+                INK,
+            );
+            fb.fill_rect(
+                x - 10 * scale,
+                y - 6 * scale,
+                (20 * scale) as u32,
+                (4 * scale) as u32,
+                STONE,
+            );
+            fb.draw_line(
+                x - 13 * scale,
+                y - 7 * scale,
+                x + 13 * scale,
+                y - 7 * scale,
+                GOLD,
+            );
             fb.fill_circle(x, y - 20 * scale, (9 * scale) as u32, orb);
             fb.draw_circle(x, y - 20 * scale, (13 * scale) as u32, RUST);
             fb.draw_circle(x, y - 20 * scale, (11 * scale) as u32, GOLD);
-            fb.fill_rect(x - 3 * scale, y - 26 * scale, (4 * scale) as u32, (3 * scale) as u32, IVORY);
-            fb.draw_line(x + 2 * scale, y - 35 * scale, x + 6 * scale, y - 29 * scale, GOLD);
+            fb.fill_rect(
+                x - 3 * scale,
+                y - 26 * scale,
+                (4 * scale) as u32,
+                (3 * scale) as u32,
+                IVORY,
+            );
+            fb.draw_line(
+                x + 2 * scale,
+                y - 35 * scale,
+                x + 6 * scale,
+                y - 29 * scale,
+                GOLD,
+            );
         }
     }
 }
