@@ -1,146 +1,140 @@
 # Prototype 001 - Le Signal muet
 
-> **Statut : PROPOSÉ, non implémenté.** Document de design v0.1, soumis à une adversarial review et à des playtests.
+> **Statut : PROPOSÉ v0.2, non implémenté.** Revu à blanc le 19 novembre 2026. Aucun playtest réalisé.
 >
-> Ce document décrit **une hypothèse de puzzle**, pas un comportement déjà disponible dans GPE.
+> **Décision :** tester la déduction de cinq glyphes dans une seule salle. Aucune fonctionnalité GPE n'est présumée existante.
 
-## 1. Intention
+## 1. Promesse et hypothèses
 
-Produire en moins de dix minutes un véritable moment de compréhension : le joueur observe une technologie inconnue, déduit une règle à partir de preuves croisées, puis **réutilise la règle dans deux nouveaux contextes**.
+*Je ne débloque pas une porte parce que j'ai deviné un code. Je la débloque parce que j'ai compris comment ces machines fonctionnent.*
 
-Promesse : *Je ne débloque pas une porte parce que j'ai trouvé un code ; je la débloque parce que j'ai compris quelque chose.*
+- **H1 (découverte)** : le joueur identifie par observation un lien entre état des dispositifs et motifs répétés.
+- **H2 (prédiction)** : il utilise ce lien pour prévoir deux actions non présentées par les exemples initiaux.
+- **H3 (plaisir)** : il décrit lui-même un déclic, pas un déchiffrage mécanique sans surprise.
 
-### Ce que l'on teste
+Les trois hypothèses seront testées ; elles ne sont pas validées par la revue à blanc.
 
-- **Hypothèse H1** : un joueur sans explication préalable peut inférer deux opérations et trois objets à partir d'indices visuels.
-- **Hypothèse H2** : la règle inférée permet de prédire au moins deux effets nouveaux.
-- **Hypothèse H3** : la résolution produit une satisfaction de découverte, et non seulement de tâtonnement.
+## 2. Contrat de la salle
 
-Ne **pas** tester la génération procédurale, une langue complète, la narration longue, le multijoueur ou un moteur de dialogue.
+Une salle 2D ; cinq glyphes ; quatre observations initiales ; deux commandes à déduire ; ni chrono, ni pénalité, ni génération, ni serveur, ni LLM.
 
-## 2. Contrat du prototype
+**Règle de portée indispensable : chaque pupitre est physiquement connecté à son dispositif et n'agit que sur lui.** Envoyer une commande avec un nom d'objet différent n'active **jamais** un appareil distant. Ce contrat évite de pouvoir ouvrir la porte depuis le pupitre de la pompe.
 
-- Une seule salle en vue 2D, sans exploration complexe.
-- Cinq glyphes abstraits et **une règle unique** : une inscription est une paire `[opération, objet]`.
-- Quatre observations initiales, deux actions de résolution.
-- Une interface minimale de combinaison de deux glyphes.
-- Pas de texte traduit automatiquement, pas de tutoriel révélant la règle.
-- Aucune dépendance à un LLM, à un backend ou à Internet.
-- Objectif de durée : environ 5 à 10 minutes, à confirmer en playtest.
+La salle expose :
 
-### Espace
+1. Deux lampes **identiques**, l'une allumée et l'autre éteinte, portant chacune une bande de deux glyphes.
+2. Une pompe en marche, dont le jet de vapeur **obstrue physiquement l'accès** au pupitre de la porte.
+3. Une porte fermée, dont les deux glyphes restent visibles malgré la vapeur.
+4. Un pupitre à deux emplacements accessible près de la pompe.
+5. Un pupitre semblable relié à la porte, accessible lorsque la vapeur a disparu.
 
-La salle contient :
-1. Une lampe allumée, avec une inscription active.
-2. Une seconde lampe éteinte, avec une inscription distincte.
-3. Une pompe en fonctionnement, dont la vapeur masque un pupitre près de la porte.
-4. Une porte fermée, avec une inscription visible.
-5. Un pupitre accessible près de la pompe, puis le pupitre de la porte une fois la vapeur dissipée.
+Les bandeaux ont visuellement la même conception que les pupitres. **La fiche de test ne dit pas** qu'ils contiennent les dernières commandes enregistrées. C'est une hypothèse que la mise en scène doit rendre découvrable.
 
-Important : les inscriptions sont présentées comme **les dernières commandes enregistrées par les dispositifs**, et non comme des phrases historiques arbitraires. Leur emplacement et le fonctionnement visible des machines rendent leur signification inférable.
+### Objectif diégétique
 
-## 3. Grammaire et solution (notes concepteur, spoilers)
+Le joueur cherche à **quitter la salle**. La fiche ne dit pas quelle machine manipuler ni quel sens attribuer aux inscriptions. Il voit naturellement la vapeur et l'obstacle.
 
-Les lettres ci-dessous sont **des identifiants de conception**, pas des glyphes à afficher dans l'interface finale. Les dessins définitifs des glyphes restent à concevoir.
+## 3. Grammaire (solution réservée aux concepteurs)
 
-| ID glyphe | Interprétation de travail | Rôle |
+Les IDs latins servent exclusivement à la documentation, pas à l'affichage :
+
+| ID | Glyphe provisoire de la fiche papier | Sens fonctionnel |
 | --- | --- | --- |
-| A | activer / éveiller | opération |
-| B | désactiver / faire taire | opération |
-| C | lumière / lampe | objet |
-| D | flux / pompe | objet |
-| E | passage / porte | objet |
+| A | △ | Activer |
+| B | ○ | Désactiver |
+| C | ◇ | Lampe |
+| D | □ | Pompe |
+| E | ⬡ | Porte |
 
-Grammaire : `[opération][objet]`. La traduction française exacte reste secondaire ; le jeu teste les **relations fonctionnelles**, pas le vocabulaire français.
+Ordre conventionnel : `[opération][objet]`.
 
-### Indices observables, dès le début
+Le second symbole **désigne le type** de l'appareil. Deux lampes du même modèle peuvent porter `A C` et `B C` parce qu'il s'agit d'appareils **locaux distincts**, commandés séparément.
 
-| Source | État visible ou audible | Paire affichée |
+Les panneaux reflètent la dernière commande locale enregistrée et l'état actuel au début de la scène. Il n'existe pas de télécommande universelle.
+
+### Quatre observations initiales
+
+| Dispositif | État visible | Inscription |
 | --- | --- | --- |
-| Lampe 1 | allumée | `A C` |
-| Lampe 2 | éteinte | `B C` |
-| Pompe | active, vapeur abondante | `A D` |
-| Porte | fermée | `B E` |
+| Lampe 1 | Allumée | `A C` |
+| Lampe 2 | Éteinte | `B C` |
+| Pompe | En fonctionnement, vapeur active | `A D` |
+| Porte | Fermée | `B E` |
 
-Déduction attendue : le premier signe exprime l'état/opération, le second désigne le dispositif. La répétition de `C` entre les deux lampes permet de croiser les indices ; `A` se retrouve sur la pompe active.
+### Deux prédictions visées
 
-### Deux prédictions à réaliser
+- **`B D` sur le pupitre de pompe** : la pompe s'arrête, la vapeur se dissipe et l'accès physique à l'autre pupitre se libère.
+- **`A E` sur le pupitre de porte** : la porte s'ouvre, le joueur peut traverser.
 
-1. Sur le pupitre de la pompe, composer **`B D`**. La pompe s'arrête, la vapeur se dissipe et le pupitre de la porte devient accessible.
-2. Sur le pupitre de la porte, composer **`A E`**. La porte s'ouvre ; une courte réaction audiovisuelle accompagne la réussite.
+La bonne paire n'est **jamais** révélée par un bandeau initial.
 
-Aucune des deux paires de résolution n'est présentée comme exemple préalable. Les résultats découlent des règles observées.
+### Sémantique des autres entrées (contrat anti-triche)
 
-**Risque assumé :** avec seulement cinq glyphes, il reste possible de tenter les combinaisons au hasard. Le prototype ne prétend pas rendre le bruteforce impossible. Les playtests devront distinguer les prédictions raisonnées des essais opportunistes.
+Un pupitre connecté à l'objet `X` accepte `A X` (activer) ou `B X` (désactiver). Si l'état demandé est déjà celui du dispositif, rien ne change. Toute autre combinaison est rejetée **sans effet sur le monde** et sans indication du symbole erroné.
 
-## 4. Parcours joueur attendu
+- `A E` saisi sur la pompe ne peut pas ouvrir la porte.
+- `A D` saisi sur la pompe la laisse en marche.
+- `B E` saisi sur la porte la laisse fermée.
+- Les commandes inappropriées et les commandes sans changement d'état ne donnent **aucun indice de traduction**, mais peuvent avoir des retours neutres d'interaction.
 
-1. **Observer** les quatre inscriptions, les deux lampes, la pompe et la porte.
-2. **Comparer** les glyphes communs : même `C` pour deux lampes, mais `A` vs `B` selon l'état.
-3. **Émettre une hypothèse** sur la position des opérations et des objets.
-4. **Prédire** `B D` pour arrêter la pompe ; observer la dissipation de la vapeur.
-5. **Transférer** la règle vers la porte : `A E`.
-6. **Comprendre le retour du monde** : les machines réagissent conformément à une règle désormais intelligible.
+Les lampes sont des **exemples environnementaux**, pas des pupitres supplémentaires du MVP. On ne postule pas que le joueur puisse les modifier.
 
-### Feedback sur erreur
+**Limite assumée :** la recherche exhaustive des paires reste possible. L'observation du cheminement du joueur et une tâche de transfert après la partie servent à distinguer compréhension et chance, sans punir les tentatives.
 
-Une paire non valide ou sans effet identifiable doit fournir un signal discret et cohérent (son, lumière du pupitre) **sans afficher une traduction ou la bonne réponse**. Pas de vie perdue, pas de pénalité arbitraire, pas de blocage définitif.
+## 4. Parcours joueur et feedback
 
-Les dispositifs doivent avoir des états visuellement distincts ; ne jamais faire reposer l'information uniquement sur le son ou uniquement sur une couleur.
+1. Voir les quatre machines et leurs inscriptions.
+2. Comparer les lampes : même objet, états contraires, glyphe initial différent.
+3. Confronter l'hypothèse à la pompe en activité et à la porte fermée.
+4. Composer une paire sur la pompe et observer l'effet matériel sur la vapeur.
+5. Composer une paire sur le pupitre désormais accessible.
+6. Expliquer la règle (uniquement **après** le test).
 
-## 5. Une réussite est-elle réellement une compréhension ?
+Échec de commande : retour visuel discret, sans texte « erreur sur la position 1 ». Les dispositifs gardent des états distincts **sans dépendre uniquement de la couleur ou du son**.
 
-Pendant le playtest, noter la séquence d'actions et, **après la fin de l'énigme**, demander sans indice :
+Un joueur qui ouvre la porte par hasard mais n'explique pas ce qu'il a compris **ne valide pas H2**.
 
-- « Que crois-tu que signifient les deux positions de glyphes ? »
-- « Pourquoi as-tu choisi cette combinaison pour la porte ? »
-- « Si une nouvelle lampe était allumée et que tu voulais l'éteindre, que ferais-tu ? »
+## 5. Protocole de playtest papier
 
-Le troisième item permet de tester un transfert hypothétique qui n'a pas été entièrement dicté par le puzzle.
+Distribuer uniquement [la fiche joueur](../playtests/001-fiche-joueur.md) ; le modérateur connaît la solution et consigne les essais sans souffler la méthode.
 
-Un joueur qui ouvre la porte par essais successifs mais ne peut pas expliquer sa prédiction **n'est pas compté comme une validation de H2**.
+Au début, ne pas expliquer le rôle des glyphes, le fait qu'il s'agisse de commandes, ni la solution. Le modérateur fournit uniquement les retours d'état correspondant à la paire tentée et au pupitre utilisé.
 
-## 6. Critères de validation de l'expérience
+Consigner : temps de première hypothèse ; nombre de commandes soumises ; ordre ; réactions observées ; paroles spontanées ; motifs d'hésitation.
 
-Test exploratoire avec **six personnes** n'ayant pas consulté la solution.
+Questions **après résolution** :
+- Pourquoi avoir choisi ces deux paires ?
+- À quoi servent les deux positions de glyphes, selon toi ?
+- Si la pompe était à nouveau arrêtée, comment la réactiverais-tu ? Pourquoi ?
+- As-tu eu un moment de compréhension, ou as-tu surtout expérimenté des combinaisons ?
 
-| Critère | Cible exploratoire |
+Six joueurs naïfs (objectif exploratoire) ; ne pas fournir la solution à ceux qui doivent encore tester.
+
+| Mesure | Cible d'exploration |
 | --- | --- |
-| Compréhension sans indice direct | Au moins 4/6 joueurs |
-| Deux paires de résolution choisies avec une justification cohérente | Au moins 4/6 |
-| Capacité à expliquer la règle après jeu | Au moins 4/6 |
-| Perception d'un « déclic » plutôt que de tâtonnement | Au moins 4/6, auto-déclaré |
-| Durée | Médiane autour de 5-10 min ; mesurer, ne pas imposer |
+| Première résolution sans indice direct | Au moins 4/6 |
+| Capacité à justifier les deux commandes | Au moins 4/6 |
+| Capacité à transférer la règle à la pompe arrêtée | Au moins 4/6 |
+| Déclic déclaré spontanément ou après question neutre | Au moins 4/6 |
+| Durée | Observer la médiane, ne pas fabriquer artificiellement 10 minutes |
 
-Ces seuils sont des objectifs de prototypage, **pas des preuves statistiques**. Conserver les retours qualitatifs et les essais infructueux.
+Les seuils ne constituent pas une preuve statistique.
 
-### Résultats possibles
+## 6. Résultats et décisions
 
-- **GO** : la majorité comprend et transfère ; la boucle est jugée satisfaisante.
-- **REVISE** : la règle reste ambiguë ou les joueurs réussissent surtout au hasard ; revoir les indices, pas le moteur.
-- **NO-GO local** : aucun déclic récurrent malgré une révision du puzzle ; remettre en cause la mécanique précise du prototype, pas l'ambition générale.
+- **GO après playtest** : la majorité démontre compréhension, transfert et plaisir de découverte.
+- **REVISE** : interprétations alternatives fréquentes, résolution par bruteforce, feedback confus ou trivialité non satisfaisante. Réviser **les preuves ou le découpage** avant de complexifier le langage.
+- **NO-GO pour cette variante** : la boucle reste sans déclic malgré une révision ciblée. Cela n'invalide pas la vision d'Archives du Silence.
 
-## 7. GPE : préflight avant tout code
+## 7. Capability preflight GPE (ultérieur)
 
-L'état réel du dépôt de GPE **n'a pas été inspecté pour cette note**. Vérifier avant toute intégration :
+**Non effectué.** Après un GO ludique, inspecter réellement les sources et le build GPE : glyphes lisibles à la résolution cible, rendu des états, commandes clavier/manette et tactile si utile, feedback accessible, scènes, packaging natif/WASM. **Hard stop** en cas de capacité absente ; documenter le plus petit changement justifié.
 
-- Rendu et lisibilité de glyphes contrastés en framebuffer 320x180 (référence de projet à confirmer).
-- Sélection de deux glyphes à la manette, au clavier et éventuellement au tactile.
-- États visuels/sonores des dispositifs ; lisibilité sans son.
-- Transition de scène, UI des deux pupitres et feedback d'erreur, avec les systèmes existants.
-- Exécution et packaging natif + WASM selon les capacités actuelles du moteur.
+## 8. Hors scope
 
-**Hard stop** si une capacité essentielle manque. Documenter le blocage et la solution minimale, sans inventer de nouvel équipement d'UI ou modifier le moteur par anticipation.
+Véritable langue complète ; carnet d'hypothèses persistant ; histoire ramifiée ; plusieurs salles ; réseau ; générateur de puzzles ; IA ; système de score ; combat ; inventaire ; systèmes de quêtes ; refactoring GPE.
 
-## 8. Hors scope de la première vertical slice
+## 9. Documents liés
 
-Langue complète ; plusieurs salles ; carnet persistant ; confiance des hypothèses ; monde ouvert ; lore exhaustif ; IA de génération ; solutions multiples automatiques ; scoring ; compte utilisateur ; backend ; moteur de dialogue ; combats ; arbre de progression.
-
-## 9. Prochaines décisions
-
-1. Tester cette énigme sur papier, y compris avec un « joueur adversarial » cherchant à forcer les combinaisons.
-2. Modifier uniquement les indices déficients selon les observations.
-3. Procéder au capability preflight GPE.
-4. Si et seulement si le préflight et la revue du puzzle sont satisfaisants, implémenter la plus petite slice jouable.
-
-Voir aussi : [review adversariale](../reviews/prototype-001-adversarial.md).
+- [Fiche sans spoilers pour les joueurs](../playtests/001-fiche-joueur.md)
+- [Revue adversariale v0.2](../reviews/prototype-001-adversarial.md)
