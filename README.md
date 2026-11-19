@@ -9,15 +9,54 @@ Comprendre plutôt que deviner.
 Découvrir plutôt qu'accumuler.
 Apprendre pour agir sur le monde.
 
-## État du projet
+## Etat du projet
 
-Phase 0 : conception et validation du premier prototype.
+**Prototype 001 natif Rust : version experimentale non validee par des joueurs.**
 
-Aucune fonctionnalité de gameplay implémentée.
+Aucune autre fonctionnalite de gameplay n'est annoncee comme implementee.
 
-## Premier prototype
+## Joueur beta : conserver la surprise
 
-**Le Signal muet**
+Si tu veux decouvrir l'enigme sans spoilers, **ne lis pas les fichiers
+`src/lib.rs`, `docs/prototypes/`, `docs/reviews/` et les tests** avant
+d'avoir joue. Le code du jeu et la documentation de conception contiennent
+inevitablement des informations sur les solutions.
 
-Une salle, cinq glyphes, plusieurs indices et un mécanisme
-à comprendre grâce à l'observation et à la déduction.
+### Lancer la version native
+
+Pre-requis : Rust 1.97.1, environnement natif compatible avec GPE et
+dependances systeme requises par le moteur.
+
+```bash
+cargo run
+```
+
+Commandes dans le jeu :
+
+- Fleches gauche/droite : selectionner un emplacement de glyphe.
+- Fleches haut/bas : faire defiler les glyphes.
+- Entree : tenter une combinaison.
+- Tab : changer de pupitre, si accessible.
+- R : recommencer.
+- Echap : quitter.
+
+Le jeu **ne demande aucune connaissance externe**. Observe, essaie et
+raisonne librement. Si tu bloques, note simplement ce qui t'a intrigue.
+
+### Validation du developpement
+
+```bash
+cargo fmt --all -- --check
+cargo check --all-targets
+cargo test --all-targets
+cargo clippy --all-targets -- -D warnings
+```
+
+Le prototype utilise l'API publique du moteur GPE sur une revision Git
+pointee dans `Cargo.toml`. Aucun changement du moteur n'est requis
+par la conception du prototype.
+
+## Phase suivante
+
+Effectuer un premier test a l'aveugle, consigner les observations, puis
+decider de la suite (GO / REVISE / NO-GO). **Aucun playtest n'a encore ete realise.**
