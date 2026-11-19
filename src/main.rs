@@ -145,11 +145,26 @@ impl FirstRoom {
         for index in 0..2 {
             let x = 108 + 35 * index as i32;
             fb.fill_rect(x, 130, 27, 22, WALL);
-            fb.draw_rect(x, 130, 27, 22, if self.slot == index { ACCENT } else { METAL });
+            fb.draw_rect(
+                x,
+                130,
+                27,
+                22,
+                if self.slot == index { ACCENT } else { METAL },
+            );
             draw_glyph(fb, self.symbols[index], x + 7, 134, TEXT);
         }
         fb.draw_text(193, 136, "ENTREE: ESSAI", TEXT);
-        fb.draw_text(14, 155, self.message, if self.message.contains("REAGI") { ACCENT } else { MUTED });
+        fb.draw_text(
+            14,
+            155,
+            self.message,
+            if self.message.contains("REAGI") {
+                ACCENT
+            } else {
+                MUTED
+            },
+        );
         fb.draw_text(14, 166, "FLECHES: CHOIX   TAB: PUPITRE   R: RESET", MUTED);
     }
 }
