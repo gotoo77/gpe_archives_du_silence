@@ -226,7 +226,7 @@ fn draw_machine(fb: &mut Framebuffer, active: bool) {
     fb.fill_circle(169, 81, 7, if active { LIGHT } else { DARK });
     fb.fill_rect(179, 70, 14, 8, if active { ACCENT } else { MUTED });
     fb.fill_rect(152, 102, 39, 10, STONE);
-    glyph_band(fb, 150, 44, [0, 3]);
+    glyph_band(fb, 150, 44, if active { [0, 3] } else { [1, 3] });
     fb.draw_line(167, 100, 167, 112, METAL);
 }
 
@@ -241,7 +241,7 @@ fn draw_door(fb: &mut Framebuffer, open: bool) {
         fb.draw_line(279, 52, 279, 112, METAL);
         fb.fill_rect(269, 82, 21, 3, LIGHT);
     }
-    glyph_band(fb, 261, 29, [1, 4]);
+    glyph_band(fb, 261, 29, if open { [0, 4] } else { [1, 4] });
 }
 
 fn main() -> Result<(), EngineError> {
