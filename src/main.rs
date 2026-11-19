@@ -283,14 +283,21 @@ impl MemoryGame {
         for (index, clue) in CLUES.iter().enumerate() {
             let (x, y) = card_pos(index);
             let focused = self.archive.focus() == index;
+            // Memory slabs have one carved underside, not three nested boxes.
             fb.fill_rect(x, y, CARD_W as u32, CARD_H as u32, DEEP);
-            fb.draw_rect(
-                x,
-                y,
-                CARD_W as u32,
-                CARD_H as u32,
-                if focused { GOLD } else { EDGE },
+            fb.fill_rect(x + 4, y + 68, 119, 25, INK);
+            fb.draw_line(
+                x + 4,
+                y + 95,
+                x + CARD_W - 5,
+                y + 95,
+                if focused { SPIRIT } else { DUST },
             );
+            if focused {
+                fb.fill_rect(x, y + 9, 3, 76, GOLD);
+                fb.draw_line(x, y, x + 16, y, GOLD);
+                fb.draw_line(x + CARD_W - 17, y, x + CARD_W - 1, y, GOLD);
+            }
             draw_scene(
                 fb,
                 x + 8,
@@ -300,7 +307,6 @@ impl MemoryGame {
                 event_for_clip(index),
                 self.elapsed,
             );
-            fb.fill_rect(x + 5, y + 70, 117, 23, INK);
             draw_sentence(fb, clue, x + 22, y + 73, 1, IVORY);
             if self.archive.watched(index) {
                 fb.draw_text(x + 5, y + 5, "*", SPIRIT);
@@ -351,7 +357,8 @@ impl MemoryGame {
             let y = 119 + option as i32 * 58;
             let active = self.testimony_focus == option;
             fb.fill_rect(70, y, 500, 55, if active { STONE } else { DEEP });
-            fb.draw_rect(70, y, 500, 55, if active { SPIRIT } else { EDGE });
+            fb.fill_rect(70, y, 3, 55, if active { SPIRIT } else { DUST });
+            fb.draw_line(70, y + 54, 570, y + 54, if active { SPIRIT } else { EDGE });
             fb.draw_text_scaled(
                 91,
                 y + 16,
@@ -467,28 +474,52 @@ fn card_pos(i: usize) -> (i32, i32) {
 
 fn draw_room(fb: &mut Framebuffer, elapsed: f32) {
     fb.clear(INK);
+    // A submerged archive, lit by cold columns and reflected amber dust.
     fb.fill_rect(0, 0, WIDTH, 52, DEEP);
-    fb.draw_line(0, 52, 639, 52, GOLD);
+    fb.fill_rect(0, 51, WIDTH, 2, RUST);
     fb.draw_text(23, 15, "LES ARCHIVES DU SILENCE", IVORY);
     fb.draw_text(23, 30, "LES REMANENCES", GOLD);
     fb.draw_text(539, 20, "FRAGMENT 002", GOLD);
-    fb.fill_rect(14, 60, 612, 259, STONE);
-    for i in 0..19 {
-        let x = 22 + i * 31;
-        fb.draw_line(x, 60, x + 7, 64, DUST);
-        fb.draw_line(x, 315, x + 18, 317, DUST);
-        if i % 3 == 0 {
-            fb.draw_line(x + 8, 69, x - 4, 301, Pixel::rgb(38, 49, 55));
+
+    fb.fill_rect(14, 60, 612, 259, Pixel::rgb(18, 31, 39));
+    // Quiet stone strata, carved fragments, and deep wall recesses.
+    for band in 0..8 {
+        let y = 62 + band * 34;
+        fb.draw_line(20, y, 620, y, Pixel::rgb(26, 42, 47));
+        for joint in 0..6 {
+            let x = 20 + joint * 104 + ((band % 2) * 31);
+            fb.draw_line(x, y, x - 4, y + 8, DUST);
         }
     }
-    for i in 0..13 {
-        let x = 16 + ((i * 173 + 49) % 605);
-        let y = 64 + ((i * 131 + 29) % 247);
-        let shift = ((elapsed * 4.0) as i32 + i * 3) % 18;
-        fb.draw(x + shift, y, GOLD);
+    for pillar in 0..4 {
+        let x = 35 + pillar * 188;
+        fb.fill_rect(x, 69, 9, 235, Pixel::rgb(24, 37, 45));
+        fb.draw_line(x + 2, 69, x + 2, 299, Pixel::rgb(43, 59, 61));
+        fb.draw_line(x - 6, 69, x + 15, 69, DUST);
+        fb.draw_line(x - 7, 307, x + 16, 307, DUST);
     }
-    fb.draw_line(13, 60, 13, 319, EDGE);
-    fb.draw_line(626, 60, 626, 319, EDGE);
+    // The halo belongs to the atmosphere, not the alphabet.
+    for layer in 0..5 {
+        let inset = layer * 3;
+        let color = if layer < 2 {
+            Pixel::rgb(30, 52, 53)
+        } else {
+            Pixel::rgb(24, 44, 49)
+        };
+        fb.draw_line(26 + inset, 70 + inset, 320, 58 + inset, color);
+        fb.draw_line(320, 58 + inset, 612 - inset, 70 + inset, color);
+    }
+    fb.fill_rect(14, 313, 612, 7, INK);
+    fb.draw_line(19, 313, 620, 313, EDGE);
+    fb.draw_line(14, 60, 14, 319, DUST);
+    fb.draw_line(625, 60, 625, 319, DUST);
+    for particle in 0..19 {
+        let x = 21 + ((particle * 167 + 41) % 587);
+        let height = 69 + ((particle * 117 + 37) % 223);
+        let drift = ((elapsed * 5.0) as i32 + particle * 5) % 27;
+        let color = if particle % 4 == 0 { GOLD } else { DUST };
+        fb.draw(x + drift, height - drift / 3, color);
+    }
 }
 
 fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
@@ -521,22 +552,32 @@ fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
 }
 
 fn draw_plaque(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32) {
+    // A single recessed stone panel with engraved corner markers.
+    let right = x + w as i32 - 1;
+    let bottom = y + h as i32 - 1;
     fb.fill_rect(x, y, w, h, DEEP);
-    fb.draw_rect(x, y, w, h, EDGE);
-    fb.draw_rect(x + 4, y + 4, w - 8, h - 8, DUST);
-    fb.draw_line(x + 14, y + 16, x + 35, y + 16, GOLD);
-    fb.draw_line(
-        x + w as i32 - 39,
-        y + h as i32 - 17,
-        x + w as i32 - 17,
-        y + h as i32 - 17,
-        GOLD,
-    );
+    fb.draw_line(x, y, right, y, EDGE);
+    fb.draw_line(x, y, x, bottom, EDGE);
+    fb.draw_line(x, bottom, right, bottom, DUST);
+    for &(px, py, sx, sy) in &[
+        (x + 5, y + 5, 1, 1),
+        (right - 5, y + 5, -1, 1),
+        (x + 5, bottom - 5, 1, -1),
+        (right - 5, bottom - 5, -1, -1),
+    ] {
+        fb.draw_line(px, py, px + sx * 12, py, GOLD);
+        fb.draw_line(px, py, px, py + sy * 9, GOLD);
+    }
 }
 
 fn draw_button(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32, label: &str, focus: bool) {
+    // A tactile carved tab rather than one more nested frame.
     fb.fill_rect(x, y, w, h, if focus { STONE } else { DEEP });
-    fb.draw_rect(x, y, w, h, if focus { SPIRIT } else { GOLD });
+    let accent = if focus { SPIRIT } else { GOLD };
+    fb.fill_rect(x, y + h as i32 - 2, w, 2, accent);
+    fb.draw_line(x, y, x + 11, y, accent);
+    fb.draw_line(x, y, x, y + 9, accent);
+    fb.draw_line(x + w as i32 - 12, y, x + w as i32 - 1, y, accent);
     let (tx, ty) = Framebuffer::text_size(label, 1);
     fb.draw_text(
         x + (w as i32 - tx as i32) / 2,
@@ -548,55 +589,61 @@ fn draw_button(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32, label: &str
 
 // All runes follow a shared six-column etching style; none is a plain polygon.
 fn draw_rune(fb: &mut Framebuffer, rune: u8, x: i32, y: i32, scale: i32, color: Pixel) {
+    // Six distinct members of one invented stone-cut alphabet, not plain polygons.
+    // Angled strokes and sharp terminals survive both 1x cards and 2x inscriptions.
     const A: &[(i32, i32, i32, i32)] = &[
-        (1, 13, 4, 3),
-        (4, 3, 8, 1),
-        (8, 1, 12, 6),
-        (12, 6, 8, 9),
-        (8, 9, 13, 14),
-        (3, 8, 10, 8),
+        (2, 5, 7, 1),
+        (7, 1, 13, 5),
+        (7, 1, 7, 15),
+        (2, 5, 4, 10),
+        (4, 10, 1, 14),
+        (7, 11, 13, 14),
+        (1, 14, 5, 14),
     ];
     const B: &[(i32, i32, i32, i32)] = &[
-        (2, 2, 6, 6),
-        (6, 6, 11, 0),
-        (6, 6, 7, 14),
-        (7, 14, 13, 11),
-        (1, 12, 7, 10),
-        (2, 2, 1, 7),
+        (3, 1, 3, 15),
+        (3, 1, 11, 3),
+        (11, 3, 8, 7),
+        (8, 7, 12, 10),
+        (12, 10, 9, 14),
+        (9, 14, 3, 15),
+        (2, 8, 10, 8),
     ];
     const C: &[(i32, i32, i32, i32)] = &[
-        (1, 2, 13, 8),
-        (13, 8, 5, 13),
-        (5, 13, 2, 9),
-        (2, 9, 8, 4),
-        (8, 4, 12, 1),
-        (5, 13, 12, 14),
+        (13, 2, 7, 1),
+        (7, 1, 2, 6),
+        (2, 6, 9, 9),
+        (9, 9, 2, 14),
+        (2, 14, 13, 13),
+        (9, 9, 12, 5),
+        (12, 5, 13, 2),
     ];
     const D: &[(i32, i32, i32, i32)] = &[
-        (7, 0, 7, 14),
-        (3, 4, 7, 2),
-        (7, 2, 12, 5),
-        (2, 10, 7, 12),
-        (7, 12, 13, 9),
-        (12, 5, 11, 9),
+        (7, 1, 7, 15),
+        (2, 4, 7, 7),
+        (7, 7, 12, 2),
+        (12, 2, 13, 8),
+        (13, 8, 9, 13),
+        (9, 13, 2, 11),
+        (2, 11, 4, 6),
     ];
     const E: &[(i32, i32, i32, i32)] = &[
-        (4, 0, 10, 2),
-        (10, 2, 9, 8),
-        (9, 8, 13, 13),
-        (4, 0, 2, 7),
-        (2, 7, 7, 14),
-        (7, 14, 13, 13),
-        (4, 9, 10, 9),
+        (3, 1, 11, 3),
+        (11, 3, 5, 8),
+        (5, 8, 11, 14),
+        (11, 14, 3, 14),
+        (3, 14, 1, 11),
+        (1, 11, 5, 8),
+        (1, 4, 13, 11),
     ];
     const F: &[(i32, i32, i32, i32)] = &[
-        (7, 0, 12, 5),
-        (12, 5, 9, 11),
-        (9, 11, 3, 13),
-        (3, 13, 1, 8),
-        (1, 8, 5, 5),
-        (5, 5, 10, 7),
-        (10, 7, 6, 13),
+        (8, 1, 12, 5),
+        (12, 5, 10, 10),
+        (10, 10, 4, 15),
+        (4, 15, 2, 11),
+        (2, 11, 4, 6),
+        (4, 6, 8, 1),
+        (4, 6, 12, 10),
     ];
     let strokes = match rune {
         0 => A,
@@ -606,6 +653,18 @@ fn draw_rune(fb: &mut Framebuffer, rune: u8, x: i32, y: i32, scale: i32, color: 
         4 => E,
         _ => F,
     };
+    // A very narrow inset edge suggests light striking an engraved groove.
+    if scale > 1 {
+        for &(x1, y1, x2, y2) in strokes {
+            fb.draw_line(
+                x + x1 * scale + 1,
+                y + y1 * scale + 1,
+                x + x2 * scale + 1,
+                y + y2 * scale + 1,
+                RUST,
+            );
+        }
+    }
     for &(x1, y1, x2, y2) in strokes {
         fb.draw_line(
             x + x1 * scale,
@@ -616,19 +675,19 @@ fn draw_rune(fb: &mut Framebuffer, rune: u8, x: i32, y: i32, scale: i32, color: 
         );
     }
     let (dx, dy) = match rune {
-        0 => (1, 2),
-        1 => (12, 14),
-        2 => (0, 11),
-        3 => (13, 1),
-        4 => (1, 13),
-        _ => (12, 1),
+        0 => (13, 5),
+        1 => (12, 10),
+        2 => (7, 1),
+        3 => (2, 11),
+        4 => (11, 14),
+        _ => (4, 6),
     };
     fb.fill_rect(
         x + dx * scale,
         y + dy * scale,
-        scale.max(1) as u32,
-        scale.max(1) as u32,
-        color,
+        scale as u32,
+        scale as u32,
+        IVORY,
     );
 }
 
@@ -712,6 +771,17 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     fb.draw_line(x + 5, floor, x + w - 6, floor, EDGE);
     fb.draw_line(x + 5, y + 4, x + 5, floor, DUST);
     fb.draw_line(x + w - 6, y + 4, x + w - 6, floor, DUST);
+    // Translucent diagonal light shafts add depth without encoding extra clues.
+    for beam in 0..4 {
+        let light_x = x + w / 6 + beam * w / 5;
+        fb.draw_line(
+            light_x,
+            y + 6,
+            light_x + w / 12,
+            floor - 4,
+            Pixel::rgb(39, 65, 64),
+        );
+    }
     let unit = if h >= 110 { 2 } else { 1 };
     let base = y + h - 12;
     let ax = x + w / 3;
@@ -1000,34 +1070,63 @@ fn draw_entity(
 }
 
 fn draw_monument(fb: &mut Framebuffer, x: i32, y: i32, time: f32, revealed: bool) {
-    let w = if revealed { 147 } else { 149 };
+    let w = 149;
     let h = if revealed { 147 } else { 134 };
-    fb.fill_rect(x, y, w, h, DEEP);
-    fb.draw_rect(x, y, w, h, GOLD);
-    fb.draw_line(x + 16, y + 12, x + w as i32 - 16, y + 12, RUST);
-    fb.draw_text(x + 29, y + 15, "LE MONUMENT", DIM);
-    draw_entity(fb, x + 71, y + 110, 3, 2, IVORY, false);
-    if revealed {
-        draw_entity(fb, x + 32, y + 107, 4, 2, SPIRIT, false);
-        fb.draw_circle(x + 71, y + 84, 32, SPIRIT);
-    } else {
-        // The erased secondary figure is deliberately visible as damage.
-        fb.draw_line(x + 19, y + 82, x + 45, y + 108, RUST);
-        fb.draw_line(x + 19, y + 108, x + 45, y + 82, RUST);
-        fb.draw_line(x + 16, y + 110, x + 44, y + 113, DUST);
+    let cx = x + 76;
+    let bottom = y + h - 1;
+    // A dark, asymmetrical reliquary cut into a ruined slab.
+    fb.fill_rect(x, y, w, h as u32, Pixel::rgb(23, 35, 40));
+    fb.fill_rect(x + 6, y + 5, 137, (h - 10) as u32, Pixel::rgb(36, 45, 46));
+    fb.fill_rect(x + 12, y + 26, 125, (h - 37) as u32, INK);
+    fb.draw_line(x + 9, y + 22, x + 140, y + 22, GOLD);
+    fb.draw_text(x + 30, y + 12, "LE MONUMENT", IVORY);
+
+    // Temple arch, fractured columns and stepped foundations.
+    for side in [x + 15, x + 125] {
+        fb.fill_rect(side, y + 39, 7, 68, STONE);
+        fb.draw_line(side + 1, y + 39, side + 1, y + 105, EDGE);
+        fb.draw_line(side - 4, y + 38, side + 11, y + 38, GOLD);
+        fb.draw_line(side - 3, y + 107, side + 10, y + 107, EDGE);
     }
-    let shimmer = if (time * 2.0) as i32 % 2 == 0 {
-        GOLD
+    fb.draw_line(x + 18, y + 38, cx, y + 27, EDGE);
+    fb.draw_line(cx, y + 27, x + 132, y + 38, EDGE);
+    fb.draw_line(x + 21, y + 43, cx, y + 33, DUST);
+    fb.draw_line(cx, y + 33, x + 129, y + 43, DUST);
+    fb.fill_rect(x + 13, y + 113, 124, 4, STONE);
+    fb.draw_line(x + 8, y + 119, x + 141, y + 119, GOLD);
+    fb.fill_rect(x + 23, y + 120, 105, 3, RUST);
+
+    // A very restrained animated corona silhouettes the central relief.
+    let pulse = (time * 1.6).sin().abs();
+    let radius = 29 + (pulse * 3.0) as u32;
+    fb.draw_circle(cx + 5, y + 76, radius + 6, Pixel::rgb(38, 82, 80));
+    fb.draw_circle(cx + 5, y + 76, radius, SPIRIT);
+    fb.draw_circle(cx + 5, y + 76, radius - 4, DUST);
+    for step in 0..7 {
+        let yy = y + 51 + step * 8;
+        let xx = x + 47 + (step % 3) * 8;
+        fb.draw(xx, yy, if step % 2 == 0 { GOLD } else { DUST });
+    }
+
+    if revealed {
+        // The effaced character returns to the original historical composition.
+        draw_entity(fb, x + 36, y + 113, 4, 2, SPIRIT, false);
+        fb.draw_line(x + 38, y + 55, x + 44, y + 59, GOLD);
     } else {
-        EDGE
-    };
-    fb.draw_line(
-        x + 10,
-        y + h as i32 - 8,
-        x + w as i32 - 10,
-        y + h as i32 - 8,
-        shimmer,
-    );
+        // The erasure is deliberately a scar, not an alphabetic clue.
+        fb.fill_rect(x + 27, y + 65, 29, 37, Pixel::rgb(37, 40, 40));
+        fb.draw_line(x + 29, y + 69, x + 55, y + 98, RUST);
+        fb.draw_line(x + 52, y + 66, x + 29, y + 93, RUST);
+        fb.draw_line(x + 27, y + 101, x + 56, y + 103, DUST);
+    }
+    draw_entity(fb, cx + 5, y + 113, 3, 2, IVORY, false);
+    for i in 0..5 {
+        let xx = x + 18 + i * 28;
+        fb.draw_line(xx, bottom - 6, xx + 9, bottom - 6, DUST);
+        if i % 2 == 0 {
+            fb.draw(xx + 5, bottom - 10, if revealed { SPIRIT } else { GOLD });
+        }
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -1147,6 +1246,29 @@ mod tests {
             rendered != untouched,
             "the inscription must render actual rune pixels"
         );
+    }
+
+    #[test]
+    fn every_carved_rune_is_distinguishable_at_both_ui_scales() {
+        for scale in [1, 2] {
+            let mut images = Vec::new();
+            for rune in 0..RUNE_COUNT {
+                let mut fb = Framebuffer::new(48, 48);
+                draw_rune(&mut fb, rune, 5, 5, scale, IVORY);
+                let image = fb.as_rgba8().to_vec();
+                assert!(images.iter().all(|other| other != &image));
+                images.push(image);
+            }
+        }
+    }
+
+    #[test]
+    fn unrecovered_and_restored_monuments_are_visually_distinct() {
+        let mut erased = Framebuffer::new(640, 360);
+        let mut recovered = Framebuffer::new(640, 360);
+        draw_monument(&mut erased, 100, 100, 1.0, false);
+        draw_monument(&mut recovered, 100, 100, 1.0, true);
+        assert_ne!(erased.as_rgba8(), recovered.as_rgba8());
     }
 
     #[test]
