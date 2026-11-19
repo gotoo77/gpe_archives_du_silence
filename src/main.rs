@@ -467,28 +467,52 @@ fn card_pos(i: usize) -> (i32, i32) {
 
 fn draw_room(fb: &mut Framebuffer, elapsed: f32) {
     fb.clear(INK);
+    // A submerged archive, lit by cold columns and reflected amber dust.
     fb.fill_rect(0, 0, WIDTH, 52, DEEP);
-    fb.draw_line(0, 52, 639, 52, GOLD);
+    fb.fill_rect(0, 51, WIDTH, 2, RUST);
     fb.draw_text(23, 15, "LES ARCHIVES DU SILENCE", IVORY);
     fb.draw_text(23, 30, "LES REMANENCES", GOLD);
     fb.draw_text(539, 20, "FRAGMENT 002", GOLD);
-    fb.fill_rect(14, 60, 612, 259, STONE);
-    for i in 0..19 {
-        let x = 22 + i * 31;
-        fb.draw_line(x, 60, x + 7, 64, DUST);
-        fb.draw_line(x, 315, x + 18, 317, DUST);
-        if i % 3 == 0 {
-            fb.draw_line(x + 8, 69, x - 4, 301, Pixel::rgb(38, 49, 55));
+
+    fb.fill_rect(14, 60, 612, 259, Pixel::rgb(18, 31, 39));
+    // Quiet stone strata, carved fragments, and deep wall recesses.
+    for band in 0..8 {
+        let y = 62 + band * 34;
+        fb.draw_line(20, y, 620, y, Pixel::rgb(26, 42, 47));
+        for joint in 0..6 {
+            let x = 20 + joint * 104 + ((band % 2) * 31);
+            fb.draw_line(x, y, x - 4, y + 8, DUST);
         }
     }
-    for i in 0..13 {
-        let x = 16 + ((i * 173 + 49) % 605);
-        let y = 64 + ((i * 131 + 29) % 247);
-        let shift = ((elapsed * 4.0) as i32 + i * 3) % 18;
-        fb.draw(x + shift, y, GOLD);
+    for pillar in 0..4 {
+        let x = 35 + pillar * 188;
+        fb.fill_rect(x, 69, 9, 235, Pixel::rgb(24, 37, 45));
+        fb.draw_line(x + 2, 69, x + 2, 299, Pixel::rgb(43, 59, 61));
+        fb.draw_line(x - 6, 69, x + 15, 69, DUST);
+        fb.draw_line(x - 7, 307, x + 16, 307, DUST);
     }
-    fb.draw_line(13, 60, 13, 319, EDGE);
-    fb.draw_line(626, 60, 626, 319, EDGE);
+    // The halo belongs to the atmosphere, not the alphabet.
+    for layer in 0..5 {
+        let inset = layer * 3;
+        let color = if layer < 2 {
+            Pixel::rgb(30, 52, 53)
+        } else {
+            Pixel::rgb(24, 44, 49)
+        };
+        fb.draw_line(26 + inset, 70 + inset, 320, 58 + inset, color);
+        fb.draw_line(320, 58 + inset, 612 - inset, 70 + inset, color);
+    }
+    fb.fill_rect(14, 313, 612, 7, INK);
+    fb.draw_line(19, 313, 620, 313, EDGE);
+    fb.draw_line(14, 60, 14, 319, DUST);
+    fb.draw_line(625, 60, 625, 319, DUST);
+    for particle in 0..19 {
+        let x = 21 + ((particle * 167 + 41) % 587);
+        let height = 69 + ((particle * 117 + 37) % 223);
+        let drift = ((elapsed * 5.0) as i32 + particle * 5) % 27;
+        let color = if particle % 4 == 0 { GOLD } else { DUST };
+        fb.draw(x + drift, height - drift / 3, color);
+    }
 }
 
 fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
@@ -521,22 +545,32 @@ fn draw_footer(fb: &mut Framebuffer, msg: &str, page: Page) {
 }
 
 fn draw_plaque(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32) {
+    // A single recessed stone panel with engraved corner markers.
+    let right = x + w as i32 - 1;
+    let bottom = y + h as i32 - 1;
     fb.fill_rect(x, y, w, h, DEEP);
-    fb.draw_rect(x, y, w, h, EDGE);
-    fb.draw_rect(x + 4, y + 4, w - 8, h - 8, DUST);
-    fb.draw_line(x + 14, y + 16, x + 35, y + 16, GOLD);
-    fb.draw_line(
-        x + w as i32 - 39,
-        y + h as i32 - 17,
-        x + w as i32 - 17,
-        y + h as i32 - 17,
-        GOLD,
-    );
+    fb.draw_line(x, y, right, y, EDGE);
+    fb.draw_line(x, y, x, bottom, EDGE);
+    fb.draw_line(x, bottom, right, bottom, DUST);
+    for &(px, py, sx, sy) in &[
+        (x + 5, y + 5, 1, 1),
+        (right - 5, y + 5, -1, 1),
+        (x + 5, bottom - 5, 1, -1),
+        (right - 5, bottom - 5, -1, -1),
+    ] {
+        fb.draw_line(px, py, px + sx * 12, py, GOLD);
+        fb.draw_line(px, py, px, py + sy * 9, GOLD);
+    }
 }
 
 fn draw_button(fb: &mut Framebuffer, x: i32, y: i32, w: u32, h: u32, label: &str, focus: bool) {
+    // A tactile carved tab rather than one more nested frame.
     fb.fill_rect(x, y, w, h, if focus { STONE } else { DEEP });
-    fb.draw_rect(x, y, w, h, if focus { SPIRIT } else { GOLD });
+    let accent = if focus { SPIRIT } else { GOLD };
+    fb.fill_rect(x, y + h as i32 - 2, w, 2, accent);
+    fb.draw_line(x, y, x + 11, y, accent);
+    fb.draw_line(x, y, x, y + 9, accent);
+    fb.draw_line(x + w as i32 - 12, y, x + w as i32 - 1, y, accent);
     let (tx, ty) = Framebuffer::text_size(label, 1);
     fb.draw_text(
         x + (w as i32 - tx as i32) / 2,
