@@ -721,6 +721,8 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
     // Action direction is from actor to patient regardless of horizontal iconography.
     draw_entity(fb, ax, base, agent, unit, GOLD, false);
     if verb == 2 {
+        // The compact memory tiles leave less headroom than the large projection.
+        let lift = if unit == 1 { 1 } else { 6 * unit };
         fb.draw_line(
             ax + 7 * unit,
             base - 12 * unit,
@@ -731,7 +733,7 @@ fn draw_scene(fb: &mut Framebuffer, x: i32, y: i32, w: i32, h: i32, scene: Scene
         draw_entity(
             fb,
             px + movement,
-            base - 6 * unit,
+            base - lift,
             patient,
             unit,
             IVORY,
